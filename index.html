@@ -2078,22 +2078,25 @@
     }
 
     function parseCSV(text) {
-      // Split by lines but respect quoted fields containing newlines
       const rows = [];
-      const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-      for (const line of lines) {
+      const rawLines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+      for (const line of rawLines) {
         if (!line.trim()) continue;
         const row = []; let cur = '', inQ = false;
         for (let i = 0; i < line.length; i++) {
           const c = line[i];
-          if (c === '"' && !inQ) { inQ = true; }
-          else if (c === '"' && inQ && line[i+1] === '"') { cur += '"'; i++; }
-          else if (c === '"' && inQ) { inQ = false; }
-          else if (c === ',' && !inQ) { row.push(cur.trim()); cur = ''; }
-          else { cur += c; }
+          if (inQ) {
+            if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+            else if (c === '"') { inQ = false; }
+            else { cur += c; }
+          } else {
+            if (c === '"') { inQ = true; }
+            else if (c === ',') { row.push(cur); cur = ''; }
+            else { cur += c; }
+          }
         }
-        row.push(cur.trim());
-        if (row.length > 1) rows.push(row);
+        row.push(cur);
+        if (row.some(v => v.trim())) rows.push(row);
       }
       return rows;
     }
