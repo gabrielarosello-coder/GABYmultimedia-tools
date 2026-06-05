@@ -2078,28 +2078,23 @@
     }
 
     function parseCSV(text) {
-      // RFC-4180 compliant — handles newlines inside quoted fields
+      // Split by lines but respect quoted fields containing newlines
       const rows = [];
-      let row = [], cur = '', inQ = false, i = 0;
-      const t = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-      while (i < t.length) {
-        const c = t[i];
-        if (inQ) {
-          if (c === '"' && t[i+1] === '"') { cur += '"'; i += 2; }
-          else if (c === '"') { inQ = false; i++; }
-          else { cur += c; i++; }
-        } else {
-          if (c === '"') { inQ = true; i++; }
-          else if (c === ',') { row.push(cur); cur = ''; i++; }
-          else if (c === '\n') {
-            row.push(cur); cur = '';
-            if (row.some(v => v.trim())) rows.push(row);
-            row = []; i++;
-          } else { cur += c; i++; }
+      const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const row = []; let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (c === '"' && !inQ) { inQ = true; }
+          else if (c === '"' && inQ && line[i+1] === '"') { cur += '"'; i++; }
+          else if (c === '"' && inQ) { inQ = false; }
+          else if (c === ',' && !inQ) { row.push(cur.trim()); cur = ''; }
+          else { cur += c; }
         }
+        row.push(cur.trim());
+        if (row.length > 1) rows.push(row);
       }
-      row.push(cur);
-      if (row.some(v => v.trim())) rows.push(row);
       return rows;
     }
 
