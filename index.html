@@ -1427,27 +1427,25 @@
       padding: 3px 10px;
       letter-spacing: 0.1em;
     }
-    /* ── Gap Analysis inline styles ── */
-    .gap-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; padding:2px 7px; border-radius:4px; margin-left:6px; vertical-align:middle }
-    .gap-badge.analyzing { background:#1a1400; color:var(--yellow); border:1px solid #3a3000 }
-    .gap-badge.ok        { background:#081a0e; color:var(--ok);     border:1px solid #0f3a1e }
-    .gap-badge.warn      { background:#1a0a00; color:var(--warn);   border:1px solid #3a1e00 }
-    .gap-badge.err       { background:#1a0505; color:var(--danger); border:1px solid #3a0f0f }
-    .gap-lines-section { margin-top:10px; border-top:1px solid var(--border); padding-top:10px }
-    .gap-lines-title { font-size:11px; font-weight:600; color:var(--warn); margin-bottom:6px }
-    .gap-ep-block { margin-bottom:8px }
-    .gap-ep-lbl { font-size:10px; color:var(--muted); font-family:'Courier New',monospace; margin-bottom:3px; text-transform:uppercase; letter-spacing:.05em }
-    .gap-line-row { font-size:11px; font-family:'Courier New',monospace; padding:3px 8px; background:var(--surface); border-left:2px solid var(--warn); margin-bottom:2px; border-radius:0 3px 3px 0 }
-    .gap-line-ts  { color:var(--muted); margin-right:6px }
-    .gap-line-char{ color:var(--acc2); margin-right:6px; font-weight:600 }
+    /* ── Gap Analysis ── */
+    .gap-badge { display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle;border:1px solid transparent }
+    .gap-badge.analyzing { background:#1a1400;color:var(--yellow);border-color:#3a3000 }
+    .gap-badge.ok        { background:#081a0e;color:var(--ok);border-color:#0f3a1e }
+    .gap-badge.warn      { background:#1a0a00;color:var(--warn);border-color:#3a1e00 }
+    .gap-badge.err       { background:#1a0505;color:var(--danger);border-color:#3a0f0f }
+    .gap-spinner { display:inline-block;width:8px;height:8px;border:1.5px solid transparent;border-top-color:currentColor;border-radius:50%;animation:gspin .7s linear infinite }
+    @keyframes gspin { to { transform:rotate(360deg) } }
+    .gap-section { margin-top:10px;border-top:1px solid var(--border);padding-top:10px }
+    .gap-ok-msg  { font-size:11px;color:var(--ok) }
+    .gap-warn-msg{ font-size:11px;padding:5px 8px;background:var(--surf);border-left:2px solid var(--danger);border-radius:0 4px 4px 0;color:var(--danger);margin-bottom:6px }
+    .gap-miss-title { font-size:11px;font-weight:700;color:var(--warn);margin-bottom:5px }
+    .gap-ep-lbl  { font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:5px 0 3px }
+    .gap-line-row{ font-size:11px;font-family:'IBM Plex Mono',monospace;padding:3px 8px;border-left:2px solid var(--warn);margin-bottom:2px;background:var(--surf);border-radius:0 3px 3px 0 }
+    .gap-line-ts  { color:var(--muted);margin-right:6px }
+    .gap-line-char{ color:var(--acc2);margin-right:6px;font-weight:600 }
     .gap-line-txt { color:var(--text) }
-    .gap-line-rms { color:var(--muted); margin-left:6px; font-size:10px }
-    .gap-ok-msg   { font-size:11px; color:var(--ok); margin-top:6px }
-    .gap-spinner  { display:inline-block; width:10px; height:10px; border:2px solid transparent; border-top-color:currentColor; border-radius:50%; animation:spin .7s linear infinite }
-    @keyframes spin { to { transform:rotate(360deg) } }
-    .m-gap-metric { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 16px; border-left:1px solid var(--border) }
-    .gap-prog-bar { height:3px; background:var(--surface2); border-radius:2px; overflow:hidden; margin-top:4px }
-    .gap-prog-fill-bar { height:100%; background:var(--accent); border-radius:2px; transition:width .2s; width:0% }
+    .gap-prog-bar { height:3px;background:var(--surf2);border-radius:2px;overflow:hidden;margin-top:4px }
+    .gap-prog-fill{ height:100%;background:var(--accent);border-radius:2px;transition:width .2s;width:0% }
   </style>
 </head>
 
@@ -1722,7 +1720,7 @@
         <div class="metric" id="m-gap-wrap" style="display:none">
           <div class="metric-val" id="m-gap-val" style="font-size:13px;color:var(--yellow)"><span class="gap-spinner"></span></div>
           <div class="metric-lbl">Gap Analysis</div>
-          <div class="gap-prog-bar" style="width:60px"><div class="gap-prog-fill-bar" id="gap-prog-main"></div></div>
+          <div class="gap-prog-bar" style="width:60px"><div class="gap-prog-fill" id="gap-prog-main"></div></div>
         </div>
       </div>
       <div class="tabs">
@@ -2050,53 +2048,26 @@
       const hdrs = rows[0].map(h => h.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''));
       const ei = hdrs.findIndex(h => h === 'EPISODE' || h === 'EP');
       const vi = hdrs.findIndex(h => h === 'VT');
-      // Extra columns for gap analysis
-      const tiIdx  = hdrs.findIndex(h => h === 'TIMESTAMPIN' || h === 'TIMEIN' || h === 'IN' || h === 'ENTRADA');
-      const toIdx  = hdrs.findIndex(h => h === 'TIMESTAMPOUT' || h === 'TIMEOUT' || h === 'OUT' || h === 'SALIDA');
-      const chIdx  = hdrs.findIndex(h => h === 'CHARACTER' || h === 'PERSONAJE' || h === 'CHAR');
-      const scIdx  = hdrs.findIndex(h => h === 'SCRIPT' || h === 'TEXT' || h === 'TEXTO' || h === 'DIALOGO');
-      const seen = new Set(), out = [], scriptLines = [];
+      const seen = new Set(), out = [];
       for (const row of rows.slice(1)) {
         const ep = (row[ei] || '').trim(), vt = (row[vi] || '').trim();
         if (ep && vt && !seen.has(ep + '|' + vt)) { seen.add(ep + '|' + vt); out.push({ ep, vt }); }
-        // Collect every line (including duplicates per ep×vt) for gap analysis
-        const timeIn  = tiIdx >= 0 ? (row[tiIdx] || '').trim() : '';
-        const timeOut = toIdx >= 0 ? (row[toIdx] || '').trim() : '';
-        if (ep && vt && timeIn && timeOut) {
-          scriptLines.push({
-            episode:   ep,
-            vt,
-            timeIn,
-            timeOut,
-            character: chIdx >= 0 ? (row[chIdx] || '').trim() : '',
-            script:    scIdx >= 0 ? (row[scIdx] || '').trim() : '',
-          });
-        }
       }
       if (!out.length) throw new Error('No EP/VT combinations found. Check the tab name is correct.');
-      return [out, scriptLines];
+      return out;
     }
 
     function parseCSV(text) {
       const rows = [];
-      const rawLines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
-      for (const line of rawLines) {
+      for (const line of text.split('\n')) {
         if (!line.trim()) continue;
         const row = []; let cur = '', inQ = false;
         for (let i = 0; i < line.length; i++) {
           const c = line[i];
-          if (inQ) {
-            if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
-            else if (c === '"') { inQ = false; }
-            else { cur += c; }
-          } else {
-            if (c === '"') { inQ = true; }
-            else if (c === ',') { row.push(cur); cur = ''; }
-            else { cur += c; }
-          }
+          if (c === '"') { inQ = !inQ; } else if (c === ',' && !inQ) { row.push(cur); cur = ''; } else cur += c;
         }
         row.push(cur);
-        if (row.some(v => v.trim())) rows.push(row);
+        rows.push(row.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"')));
       }
       return rows;
     }
@@ -2266,22 +2237,21 @@
       const checks = { empty: g('chk-empty').checked, small: g('chk-small').checked, naming: g('chk-naming').checked, recent: g('chk-recent').checked };
       try {
         log('Reading Google Sheet…'); setPbar(8);
-        const [[combos, scriptLines], showName] = await Promise.all([
+        const [combos, showName] = await Promise.all([
           fetchSheet(sid, sname),
           fetchSheetTitle(sid),
         ]);
-        log(`${combos.length} EP×VT combinations${scriptLines.length ? ` · ${scriptLines.length} script lines with timestamps` : ''}`);
+        log(`${combos.length} EP×VT combinations`);
         if (showName) {
           g('show-name').textContent = showName;
           log(`Show: ${showName}`);
         }
-        STATE._scriptLines = scriptLines;
         setPbar(28);
         log('Scanning Drive folders…');
         const { subs, files, subMap } = await scanDrive(fid);
         log(`${files.length} audio files found`); setPbar(68);
         log('Building match preview…');
-        STATE._pending = { combos, files, subs, subMap, checks, customMap, scriptLines: STATE._scriptLines || [] };
+        STATE._pending = { combos, files, subs, subMap, checks, customMap, sid, sname };
         setPbar(90);
         // Show match review modal before finalizing
         showMatchModal(combos, subs, files, customMap);
@@ -2399,7 +2369,7 @@
 
     async function confirmMatching() {
       g('match-modal').style.display = 'none';
-      const { combos, files, subs, subMap, checks, scriptLines } = STATE._pending;
+      const { combos, files, subs, subMap, checks, sid, sname } = STATE._pending;
       const matchMap = STATE._matchMap;
       // Build a resolved customMap from user selections
       const resolvedMap = {};
@@ -2451,13 +2421,15 @@
         log(`✓ Done — ${nc}/${vtReports.length} VTs complete, ${completed.length} eps fully delivered`);
         setStat(`${combos.length} expected · ${totalDel} delivered · ${totalMiss} missing · ${qa.length} QA issues · ${completed.length} completed eps`);
         showTab('report', document.querySelector('.tab'));
-        // ── Gap analysis — runs automatically if timestamps are available ──
-        if (scriptLines && scriptLines.length) {
-          log(`Gap analysis: ${scriptLines.length} script lines loaded · ${[...new Set(scriptLines.map(l=>l.vt))].length} VTs`);
-          runGapAnalysis(vtReports, files, scriptLines).catch(err => log('Gap error: ' + err.message));
-        } else {
-          log('Gap analysis skipped — no TIMESTAMP IN/OUT columns found in sheet');
-        }
+        // ── Gap Analysis ──
+        fetchScriptLines(sid, sname).then(scriptLines => {
+          if (scriptLines && scriptLines.length) {
+            log(`Gap: ${scriptLines.length} script lines loaded for ${[...new Set(scriptLines.map(l=>l.vt))].length} VTs`);
+            runGapAnalysis(vtReports, files, scriptLines);
+          } else {
+            log('Gap: no timestamp columns found in sheet — skipping');
+          }
+        }).catch(err => log('Gap fetch error: ' + err.message));
       } catch (err) { log('ERROR: ' + err.message); console.error(err); }
     }
 
@@ -2775,292 +2747,234 @@
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // ═══════════════════════════════════════════════════════════════
-    // GAP ANALYSIS — automatic, runs after delivery check
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════
+    // GAP ANALYSIS — reads script timestamps, analyzes audio
+    // ═══════════════════════════════════════════════════
 
-    let GAP = {
-      audioCtx: null,
-      results: {}, // vt → { lines[], missing, bgAudio, analyzed }
-    };
+    let GAP = { audioCtx: null, results: {} };
 
-    function tsToSec(ts) {
-      const c = (ts || '').replace(',', '.');
+    // Fetch script lines with timestamps — completely separate from fetchSheet
+    async function fetchScriptLines(sid, sname) {
+      const encName = encodeURIComponent(sname);
+      const url = `https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&sheet=${encName}&tq=select%20*&headers=1`;
+      try {
+        const r = await fetch(url);
+        if (!r.ok) return [];
+        const text = await r.text();
+        if (text.trim().startsWith('<')) return [];
+        // Simple but correct CSV parse: split by lines, handle quoted commas
+        const lines = text.split('\n');
+        if (lines.length < 2) return [];
+        // Parse header row
+        const parseRow = line => {
+          const cols = []; let cur = '', inQ = false;
+          for (let i = 0; i < line.length; i++) {
+            const c = line[i];
+            if (inQ) {
+              if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+              else if (c === '"') { inQ = false; }
+              else cur += c;
+            } else {
+              if (c === '"') { inQ = true; }
+              else if (c === ',') { cols.push(cur); cur = ''; }
+              else cur += c;
+            }
+          }
+          cols.push(cur);
+          return cols;
+        };
+        const hdrs = parseRow(lines[0]).map(h => h.trim().toUpperCase().replace(/[^A-Z0-9]/g,''));
+        const ei  = hdrs.findIndex(h => h === 'EPISODE' || h === 'EP');
+        const vi  = hdrs.findIndex(h => h === 'VT');
+        const ti  = hdrs.findIndex(h => h === 'TIMESTAMPIN' || h === 'TIMEIN');
+        const to  = hdrs.findIndex(h => h === 'TIMESTAMPOUT' || h === 'TIMEOUT');
+        const chi = hdrs.findIndex(h => h === 'CHARACTER' || h === 'PERSONAJE');
+        const sci = hdrs.findIndex(h => h === 'SCRIPT' || h === 'TEXT' || h === 'TEXTO');
+        if (ei < 0 || vi < 0 || ti < 0 || to < 0) return [];
+        const out = [];
+        for (const line of lines.slice(1)) {
+          if (!line.trim()) continue;
+          const cols = parseRow(line);
+          const ep = (cols[ei]||'').trim(), vt = (cols[vi]||'').trim();
+          const timeIn = (cols[ti]||'').trim(), timeOut = (cols[to]||'').trim();
+          if (ep && vt && timeIn && timeOut) {
+            out.push({ episode: ep, vt, timeIn, timeOut,
+              character: chi>=0 ? (cols[chi]||'').trim() : '',
+              script:    sci>=0 ? (cols[sci]||'').trim() : '' });
+          }
+        }
+        return out;
+      } catch(e) { return []; }
+    }
+
+    function gapTsToSec(ts) {
+      const c = (ts||'').replace(',','.');
       const p = c.split(':');
-      if (p.length === 3) return +p[0] * 3600 + +p[1] * 60 + parseFloat(p[2]);
-      if (p.length === 2) return +p[0] * 60 + parseFloat(p[1]);
-      return parseFloat(c) || 0;
+      if (p.length===3) return +p[0]*3600 + +p[1]*60 + parseFloat(p[2]);
+      if (p.length===2) return +p[0]*60 + parseFloat(p[1]);
+      return parseFloat(c)||0;
     }
 
-    function getRMS(buf, t0, t1) {
-      // Returns linear RMS (0–1), not dB
+    function gapRMS(buf, t0, t1) {
       const sr = buf.sampleRate;
-      const s0 = Math.max(0, Math.floor(t0 * sr));
-      const s1 = Math.min(buf.length, Math.ceil(t1 * sr));
-      if (s1 <= s0) return 0;
-      let sq = 0, n = 0;
-      for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+      const s0 = Math.max(0, Math.floor(t0*sr));
+      const s1 = Math.min(buf.length, Math.ceil(t1*sr));
+      if (s1<=s0) return 0;
+      let sq=0, n=0;
+      for (let ch=0; ch<buf.numberOfChannels; ch++) {
         const d = buf.getChannelData(ch);
-        for (let i = s0; i < s1; i++) { sq += d[i] * d[i]; n++; }
+        for (let i=s0; i<s1; i++) { sq+=d[i]*d[i]; n++; }
       }
-      return Math.sqrt(sq / Math.max(n, 1));
+      return Math.sqrt(sq/Math.max(n,1));
     }
 
-    function toDb(rms) {
-      return rms === 0 ? -Infinity : 20 * Math.log10(rms);
+    function gapNoiseFloor(buf, segs) {
+      const PAD=0.2, MIN=0.5, dur=buf.duration;
+      const sorted = [...segs].sort((a,b)=>a.t0-b.t0);
+      const windows = [];
+      if (sorted.length && sorted[0].t0>MIN+PAD) windows.push({t0:0,t1:sorted[0].t0-PAD});
+      for (let i=0;i<sorted.length-1;i++) {
+        const gs=sorted[i].t1+PAD, ge=sorted[i+1].t0-PAD;
+        if (ge-gs>=MIN) windows.push({t0:gs,t1:ge});
+      }
+      if (sorted.length && dur-sorted[sorted.length-1].t1>MIN+PAD)
+        windows.push({t0:sorted[sorted.length-1].t1+PAD,t1:dur});
+      if (!windows.length) return 0.002;
+      const samples = windows.slice(0,8).map(w=>gapRMS(buf,w.t0,w.t1)).sort((a,b)=>a-b);
+      return samples[Math.floor(samples.length/2)];
     }
 
-    // Estimate the noise floor of the file by sampling silent gaps between lines
-    // Returns linear RMS of the noise floor
-    function estimateNoiseFloor(buf, scriptSegments) {
-      // Build a list of "should be silent" windows: gaps between lines, plus before first and after last
-      const dur = buf.duration;
-      const PADDING = 0.2; // seconds buffer around each line to avoid bleed
-      const MIN_GAP = 0.5; // min gap duration to sample
-      // Sort segments by start time
-      const segs = [...scriptSegments].sort((a, b) => a.t0 - b.t0);
-      const silentWindows = [];
-      // Before first line
-      if (segs.length && segs[0].t0 > MIN_GAP + PADDING) {
-        silentWindows.push({ t0: 0, t1: segs[0].t0 - PADDING });
-      }
-      // Between lines
-      for (let i = 0; i < segs.length - 1; i++) {
-        const gapStart = segs[i].t1 + PADDING;
-        const gapEnd = segs[i + 1].t0 - PADDING;
-        if (gapEnd - gapStart >= MIN_GAP) silentWindows.push({ t0: gapStart, t1: gapEnd });
-      }
-      // After last line
-      if (segs.length && dur - segs[segs.length - 1].t1 > MIN_GAP + PADDING) {
-        silentWindows.push({ t0: segs[segs.length - 1].t1 + PADDING, t1: dur });
-      }
-      if (!silentWindows.length) return 0.001; // fallback: very low noise floor
-      // Sample up to 10 windows, take median RMS
-      const samples = silentWindows.slice(0, 10).map(w => getRMS(buf, w.t0, w.t1));
-      samples.sort((a, b) => a - b);
-      return samples[Math.floor(samples.length / 2)];
+    function gapEpNum(s) { return parseInt((s||'').replace(/\D/g,''),10)||0; }
+    function gapEpFromStem(stem) {
+      const m=(stem||'').match(/(?:ep[_\-\s]?)?(\d{1,4})/i);
+      return m ? parseInt(m[1],10) : null;
     }
 
-    function epNumOf(s) { return parseInt((s || '').replace(/\D/g, ''), 10) || 0; }
-
-    function epFromStem(stem) {
-      const m = (stem || '').match(/(?:ep[_\-\s]?)?(\d{1,4})/i);
-      return m ? parseInt(m[1], 10) : null;
-    }
-
-    async function downloadAudioBuffer(fileId) {
+    async function gapDownload(fileId) {
       const headers = {};
       if (GOOG_TOKEN) headers['Authorization'] = `Bearer ${GOOG_TOKEN}`;
       const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
-      const r = await fetch(url, { headers });
-      if (!r.ok) throw new Error(`HTTP ${r.status} downloading file ${fileId}`);
-      const ab = await r.arrayBuffer();
-      GAP.audioCtx = GAP.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      return GAP.audioCtx.decodeAudioData(ab);
+      const r = await fetch(url, {headers});
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      GAP.audioCtx = GAP.audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+      return GAP.audioCtx.decodeAudioData(await r.arrayBuffer());
     }
 
-    async function analyzeAudioFile(audioBuf, epLines) {
-      const dur = audioBuf.duration;
-      // Build segments for this VT in this episode
-      const segments = epLines.map(l => ({ t0: tsToSec(l.timeIn), t1: tsToSec(l.timeOut), line: l }))
-        .filter(s => s.t1 > s.t0 && s.t0 < dur);
+    function gapFindCard(vt) {
+      return [...document.querySelectorAll('.vtc')].find(el=>{
+        const n=el.querySelector('.vtc-name');
+        return n && n.textContent.trim()===vt;
+      })||null;
+    }
 
-      // Calibrate noise floor from the silence between lines
-      const noiseFloor = estimateNoiseFloor(audioBuf, segments);
-      // Voice threshold: 4x the noise floor RMS (roughly +12dB above noise)
-      const voiceThreshold = noiseFloor * 4;
-      // Background audio threshold: 3x noise floor but applied to gaps (more lenient)
-      const bgThreshold = noiseFloor * 3;
+    function gapSetBadge(vt, cls, text) {
+      const card = gapFindCard(vt); if (!card) return;
+      let b = card.querySelector('.gap-badge');
+      if (!b) { b=document.createElement('span'); b.className='gap-badge';
+        const nm=card.querySelector('.vtc-name'); if(nm) nm.after(b); }
+      b.className=`gap-badge ${cls}`; b.innerHTML=text;
+    }
 
-      log(`Gap: noise floor ${toDb(noiseFloor).toFixed(1)}dB · voice threshold ${toDb(voiceThreshold).toFixed(1)}dB`);
-
-      const lines = [];
-      for (let i = 0; i < segments.length; i++) {
-        if (i % 30 === 0) await new Promise(r => setTimeout(r, 0));
-        const { t0, t1, line } = segments[i];
-        const rms = getRMS(audioBuf, t0, t1);
-        const hasVoice = rms >= voiceThreshold;
-        lines.push({
-          ep: line.episode, timeIn: line.timeIn, timeOut: line.timeOut,
-          character: line.character, script: line.script,
-          rms, noiseFloor, missing: !hasVoice,
-        });
-      }
-
-      // Check for background audio in silent gaps
-      // Build gap windows between all script lines (not just this VT's)
-      const segs = [...segments].sort((a, b) => a.t0 - b.t0);
-      let bgAudio = false;
-      let bgSamples = [];
-      const PADDING = 0.3;
-      // Sample a few gaps
-      for (let i = 0; i < segs.length - 1 && bgSamples.length < 8; i++) {
-        const gapStart = segs[i].t1 + PADDING;
-        const gapEnd = segs[i + 1].t0 - PADDING;
-        if (gapEnd - gapStart >= 0.5) {
-          bgSamples.push(getRMS(audioBuf, gapStart, gapEnd));
+    function gapRefreshCard(vt) {
+      const card=gapFindCard(vt); if(!card) return;
+      const body=card.querySelector('.vtc-body'); if(!body) return;
+      const old=body.querySelector('.gap-section'); if(old) old.remove();
+      const r=GAP.results[vt]; if(!r||!r.lines.length) return;
+      const missing=r.lines.filter(l=>l.missing);
+      let html=`<div class="gap-section">`;
+      if (r.bgAudio) html+=`<div class="gap-warn-msg">⚠ Background audio detected in silent gaps — possible bad render</div>`;
+      if (!missing.length) {
+        html+=`<div class="gap-ok-msg">🎙 All ${r.lines.length} lines recorded ✓</div>`;
+      } else {
+        html+=`<div class="gap-miss-title">🎙 Missing lines (${missing.length})</div>`;
+        const eps=[...new Set(missing.map(l=>l.ep))].sort((a,b)=>gapEpNum(a)-gapEpNum(b));
+        for (const ep of eps) {
+          const epL=missing.filter(l=>l.ep===ep);
+          html+=`<div class="gap-ep-lbl">${esc(ep)} — ${epL.length} line${epL.length!==1?'s':''}</div>`;
+          epL.forEach(l=>{
+            html+=`<div class="gap-line-row"><span class="gap-line-ts">${esc(l.timeIn)}</span><span class="gap-line-char">${esc(l.character)}</span><span class="gap-line-txt">${esc((l.script||'').slice(0,80))}${(l.script||'').length>80?'…':''}</span></div>`;
+          });
         }
       }
-      if (bgSamples.length >= 3) {
-        const avgBg = bgSamples.reduce((s, v) => s + v, 0) / bgSamples.length;
-        bgAudio = avgBg > bgThreshold;
-        if (bgAudio) log(`Gap: ⚠ background audio detected in gaps (avg ${toDb(avgBg).toFixed(1)}dB vs noise ${toDb(noiseFloor).toFixed(1)}dB)`);
-      }
-
-      return { lines, bgAudio, noiseFloor };
+      html+=`</div>`;
+      const sec=document.createElement('div'); sec.innerHTML=html;
+      body.appendChild(sec.firstChild);
     }
 
     async function runGapAnalysis(vtReports, driveFiles, scriptLines) {
-      if (!scriptLines || !scriptLines.length) return;
+      const active=vtReports.filter(r=>r.status!=='notfound'&&r.deliveredList.length>0);
+      if (!active.length) return;
+      g('m-gap-wrap').style.display='';
+      g('m-gap-val').innerHTML='<span class="gap-spinner"></span>';
+      GAP.results={};
+      let total=active.reduce((s,r)=>s+r.deliveredList.length,0), done=0;
 
-      g('m-gap-wrap').style.display = '';
-      g('m-gap-val').innerHTML = '<span class="gap-spinner"></span>';
-
-      GAP.results = {};
-      const activeReports = vtReports.filter(r => r.status !== 'notfound' && r.deliveredList.length > 0);
-      if (!activeReports.length) { log('Gap: no delivered files to analyze'); return; }
-      log(`Gap: ${activeReports.length} VTs · ${activeReports.reduce((s,r)=>s+r.deliveredList.length,0)} files to scan`);
-      let totalFiles = activeReports.reduce((s, r) => s + r.deliveredList.length, 0);
-      let doneFiles = 0;
-
-      for (const report of activeReports) {
-        const vt = report.vt;
-        GAP.results[vt] = { lines: [], analyzed: 0, missing: 0, bgAudio: false };
-        const vtLines = scriptLines.filter(l => l.vt === vt);
-        log(`Gap: VT "${vt}" — ${vtLines.length} script lines, folder "${report.folderName}", ${report.deliveredList.length} delivered eps`);
-        if (!vtLines.length) { doneFiles += report.deliveredList.length; continue; }
-
-        updateVtGapBadge(vt, 'analyzing', '⏳ analyzing…');
+      for (const report of active) {
+        const vt=report.vt;
+        GAP.results[vt]={lines:[],bgAudio:false};
+        const vtLines=scriptLines.filter(l=>l.vt===vt);
+        if (!vtLines.length) { done+=report.deliveredList.length; continue; }
+        gapSetBadge(vt,'analyzing','<span class="gap-spinner"></span> analyzing…');
 
         for (const ep of report.deliveredList) {
-          const driveFile = driveFiles.find(f => f.folder === report.folderName && epFromStem(f.stem) === epNumOf(ep));
-          if (!driveFile) { log(`Gap: no audio file found for ${vt} / ${ep} in folder "${report.folderName}"`); doneFiles++; continue; }
-
+          const df=driveFiles.find(f=>f.folder===report.folderName&&gapEpFromStem(f.stem)===gapEpNum(ep));
+          if (!df) { log(`Gap: no file for ${vt}/${ep}`); done++; continue; }
           try {
-            log(`Gap: downloading ${driveFile.name}…`);
-            const audioBuf = await downloadAudioBuffer(driveFile.id);
-            const epLines = vtLines.filter(l => epNumOf(l.episode) === epNumOf(ep));
-            if (!epLines.length) { log(`Gap: no script lines for ${vt} / ${ep}`); doneFiles++; continue; }
-
-            const { lines, bgAudio } = await analyzeAudioFile(audioBuf, epLines);
-
-            for (const l of lines) {
-              GAP.results[vt].lines.push({ ...l, file: driveFile.name });
-              GAP.results[vt].analyzed++;
-              if (l.missing) GAP.results[vt].missing++;
+            log(`Gap: downloading ${df.name}…`);
+            const buf=await gapDownload(df.id);
+            const epLines=vtLines.filter(l=>gapEpNum(l.episode)===gapEpNum(ep));
+            if (!epLines.length) { done++; continue; }
+            // Calibrate noise floor
+            const segs=epLines.map(l=>({t0:gapTsToSec(l.timeIn),t1:gapTsToSec(l.timeOut)})).filter(s=>s.t1>s.t0);
+            const noise=gapNoiseFloor(buf,segs);
+            const voiceThresh=noise*4;
+            const bgThresh=noise*3;
+            log(`Gap: ${vt}/${ep} noise=${(20*Math.log10(Math.max(noise,1e-10))).toFixed(1)}dB threshold=${(20*Math.log10(Math.max(voiceThresh,1e-10))).toFixed(1)}dB`);
+            // Analyze each line
+            for (let i=0;i<epLines.length;i++) {
+              if (i%30===0) await new Promise(r=>setTimeout(r,0));
+              const l=epLines[i];
+              const t0=gapTsToSec(l.timeIn),t1=gapTsToSec(l.timeOut);
+              if (t1<=t0||t0>buf.duration) continue;
+              const rms=gapRMS(buf,t0,t1);
+              GAP.results[vt].lines.push({ep,timeIn:l.timeIn,timeOut:l.timeOut,character:l.character,script:l.script,missing:rms<voiceThresh});
             }
-            if (bgAudio) GAP.results[vt].bgAudio = true;
-
-          } catch (err) {
-            log(`Gap: error on ${driveFile.name}: ${err.message}`);
-          }
-
-          doneFiles++;
-          const pct = Math.round(doneFiles / totalFiles * 100);
-          g('gap-prog-main').style.width = pct + '%';
-          setStat(`Gap analysis: ${pct}% (${doneFiles}/${totalFiles} files)…`);
-
-          // Live badge update
-          const r = GAP.results[vt];
-          const issues = r.missing + (r.bgAudio ? 1 : 0);
-          if (issues > 0) updateVtGapBadge(vt, 'warn', `⚠ ${r.missing > 0 ? r.missing + ' missing' : ''}${r.missing > 0 && r.bgAudio ? ' · ' : ''}${r.bgAudio ? 'bg audio' : ''}`);
-          else updateVtGapBadge(vt, 'analyzing', '⏳ analyzing…');
-          refreshVtCard(vt);
+            // Check background audio in gaps
+            const sorted=[...segs].sort((a,b)=>a.t0-b.t0);
+            const bgSamples=[];
+            for (let i=0;i<sorted.length-1&&bgSamples.length<6;i++) {
+              const gs=sorted[i].t1+0.3,ge=sorted[i+1].t0-0.3;
+              if (ge-gs>=0.5) bgSamples.push(gapRMS(buf,gs,ge));
+            }
+            if (bgSamples.length>=3) {
+              const avg=bgSamples.reduce((s,v)=>s+v,0)/bgSamples.length;
+              if (avg>bgThresh) GAP.results[vt].bgAudio=true;
+            }
+          } catch(e) { log(`Gap error ${df.name}: ${e.message}`); }
+          done++;
+          g('gap-prog-main').style.width=Math.round(done/total*100)+'%';
+          setStat(`Gap analysis: ${done}/${total} files…`);
+          const r=GAP.results[vt];
+          const miss=r.lines.filter(l=>l.missing).length;
+          if (miss>0||r.bgAudio) gapSetBadge(vt,'warn',`⚠ ${miss>0?miss+' missing':''}${miss>0&&r.bgAudio?' · ':''}${r.bgAudio?'bg audio':''}`);
+          gapRefreshCard(vt);
         }
-
-        // Final badge
-        const r = GAP.results[vt];
-        if (!r.analyzed) updateVtGapBadge(vt, 'err', '? no data');
-        else if (r.missing === 0 && !r.bgAudio) updateVtGapBadge(vt, 'ok', '✓ audio OK');
-        else {
-          const parts = [];
-          if (r.missing > 0) parts.push(`${r.missing} missing`);
-          if (r.bgAudio) parts.push('bg audio detected');
-          updateVtGapBadge(vt, 'warn', `⚠ ${parts.join(' · ')}`);
-        }
-        refreshVtCard(vt);
+        const r=GAP.results[vt];
+        const miss=r.lines.filter(l=>l.missing).length;
+        if (!r.lines.length) gapSetBadge(vt,'err','? no data');
+        else if (miss===0&&!r.bgAudio) gapSetBadge(vt,'ok','✓ audio OK');
+        else { const p=[]; if(miss>0) p.push(`${miss} missing`); if(r.bgAudio) p.push('bg audio'); gapSetBadge(vt,'warn',`⚠ ${p.join(' · ')}`); }
+        gapRefreshCard(vt);
       }
 
-      const totalMissing = Object.values(GAP.results).reduce((s, r) => s + r.missing, 0);
-      const totalBg = Object.values(GAP.results).filter(r => r.bgAudio).length;
-      const totalAnalyzed = Object.values(GAP.results).reduce((s, r) => s + r.analyzed, 0);
-
-      if (totalMissing === 0 && totalBg === 0) {
-        g('m-gap-val').innerHTML = `<span style="color:var(--ok)">✓ ${totalAnalyzed} lines OK</span>`;
-      } else {
-        const parts = [];
-        if (totalMissing > 0) parts.push(`${totalMissing} missing`);
-        if (totalBg > 0) parts.push(`${totalBg} VT bg audio`);
-        g('m-gap-val').innerHTML = `<span style="color:var(--warn)">⚠ ${parts.join(' · ')}</span>`;
-      }
-      g('gap-prog-main').style.width = '100%';
-      log(`Gap analysis complete — ${totalMissing} missing lines, ${totalBg} VTs with background audio`);
-      setStat(`Delivery check complete · Gap: ${totalMissing} missing lines${totalBg ? ` · ${totalBg} VTs with bg audio` : ''}`);
-    }
-
-    function updateVtGapBadge(vt, cls, text) {
-      const card = findVtCard(vt);
-      if (!card) return;
-      let badge = card.querySelector('.gap-badge');
-      if (!badge) {
-        badge = document.createElement('span');
-        badge.className = 'gap-badge';
-        const nameEl = card.querySelector('.vtc-name');
-        if (nameEl) nameEl.after(badge);
-      }
-      badge.className = `gap-badge ${cls}`;
-      badge.innerHTML = text;
-    }
-
-    function findVtCard(vt) {
-      return [...document.querySelectorAll('.vtc')].find(el => {
-        const n = el.querySelector('.vtc-name');
-        return n && n.textContent.trim() === vt;
-      }) || null;
-    }
-
-    function refreshVtCard(vt) {
-      const card = findVtCard(vt);
-      if (!card) return;
-      const body = card.querySelector('.vtc-body');
-      if (!body) return;
-      const old = body.querySelector('.gap-lines-section');
-      if (old) old.remove();
-      const r = GAP.results[vt];
-      if (!r || !r.lines.length) return;
-
-      const missingLines = r.lines.filter(l => l.missing);
-      let html = `<div class="gap-lines-section">`;
-
-      // Background audio warning
-      if (r.bgAudio) {
-        html += `<div style="font-size:11px; padding:5px 8px; margin-bottom:8px; background:var(--surface2); border-left:2px solid var(--danger); border-radius:0 4px 4px 0; color:var(--danger)">
-          ⚠ Background audio detected in silent gaps — possible bad render (original track bleeding through)
-        </div>`;
-      }
-
-      if (!missingLines.length) {
-        html += `<div class="gap-ok-msg">🎙 All ${r.analyzed} lines recorded ✓</div>`;
-      } else {
-        html += `<div class="gap-lines-title">🎙 Missing lines (${missingLines.length})</div>`;
-        const eps = [...new Set(missingLines.map(l => l.ep))].sort((a,b) => epNumOf(a) - epNumOf(b));
-        for (const ep of eps) {
-          const epLines = missingLines.filter(l => l.ep === ep);
-          html += `<div class="gap-ep-block"><div class="gap-ep-lbl">${esc(ep)} — ${epLines.length} line${epLines.length !== 1 ? 's' : ''}</div>`;
-          epLines.forEach(l => {
-            html += `<div class="gap-line-row">
-              <span class="gap-line-ts">${esc(l.timeIn)}</span>
-              <span class="gap-line-char">${esc(l.character)}</span>
-              <span class="gap-line-txt">${esc((l.script || '').slice(0, 90))}${(l.script||'').length > 90 ? '…' : ''}</span>
-            </div>`;
-          });
-          html += `</div>`;
-        }
-      }
-      html += `</div>`;
-      const sec = document.createElement('div');
-      sec.innerHTML = html;
-      body.appendChild(sec.firstChild);
+      const totalMiss=Object.values(GAP.results).reduce((s,r)=>s+r.lines.filter(l=>l.missing).length,0);
+      const totalBg=Object.values(GAP.results).filter(r=>r.bgAudio).length;
+      const totalLines=Object.values(GAP.results).reduce((s,r)=>s+r.lines.length,0);
+      g('gap-prog-main').style.width='100%';
+      if (totalMiss===0&&totalBg===0) g('m-gap-val').innerHTML=`<span style="color:var(--ok)">✓ ${totalLines} OK</span>`;
+      else { const p=[]; if(totalMiss>0)p.push(`${totalMiss} missing`); if(totalBg>0)p.push(`${totalBg} bg audio`); g('m-gap-val').innerHTML=`<span style="color:var(--warn)">⚠ ${p.join(' · ')}</span>`; }
+      log(`Gap complete — ${totalMiss} missing lines, ${totalBg} VTs with bg audio`);
+      setStat(`Delivery check complete · Gap: ${totalMiss} missing lines${totalBg?` · ${totalBg} VTs with bg audio`:''}`);
     }
 
     // VT ASSIGNMENT MODULE
