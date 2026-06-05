@@ -1,0 +1,3780 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="app-version" content="__VERSION__">
+  <meta name="build-hash" content="__HASH__">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Delivery Check</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    :root {
+      --bg: #0f0f0f;
+      --surf: #1a1a1a;
+      --surf2: #222222;
+      --border: #333333;
+      --accent: #d23c46;
+      --acc2: #fa6464;
+      --text: #f0f0f0;
+      --muted: #888888;
+      --muted2: #444444;
+      --danger: #ff5c5c;
+      --warn: #f5a623;
+      --ok: #3dd68c;
+      --info: #5bc8f5;
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --surface2: #181818;
+      --border: #2a2a2a;
+      --border2: #333333;
+      --red: #e81c1c;
+      --red-dim: #9b1212;
+      --red-glow: rgba(232, 28, 28, 0.12);
+      --red-soft: rgba(232, 28, 28, 0.08);
+      --text: #f0f0f0;
+      --muted: #666666;
+      --muted2: #444444;
+      --white: #ffffff;
+      --yellow: #f0c040;
+      --blue: #4a8fff;
+      --green: #22c55e;
+      --display: 'Bebas Neue', sans-serif;
+      --mono: 'IBM Plex Mono', monospace;
+      --sans: 'IBM Plex Sans', sans-serif;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      min-height: 100vh
+    }
+
+    .topbar {
+      background: var(--surf);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      gap: 12px
+    }
+
+    .topbar-title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: .01em
+    }
+
+    .topbar-title em {
+      color: var(--acc2);
+      font-style: normal
+    }
+
+    .spacer {
+      flex: 1
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      height: calc(100vh - 56px)
+    }
+
+    .sidebar {
+      background: var(--surf);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto
+    }
+
+    .sb-sec {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border)
+    }
+
+    .sb-lbl {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--muted2);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 10px
+    }
+
+    .field {
+      margin-bottom: 8px
+    }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 3px
+    }
+
+    .field input {
+      width: 100%;
+      background: var(--surf2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      color: var(--text);
+      font-size: 12px;
+      outline: none;
+      transition: border .15s
+    }
+
+    .field input:focus {
+      border-color: var(--accent)
+    }
+
+    .field input::placeholder {
+      color: var(--muted2)
+    }
+
+    .hint {
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 4px
+    }
+
+    .checks {
+      display: flex;
+      flex-direction: column;
+      gap: 3px
+    }
+
+    .chk {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 6px;
+      border-radius: 5px;
+      cursor: pointer
+    }
+
+    .chk:hover {
+      background: var(--surf2)
+    }
+
+    .chk input {
+      accent-color: var(--accent);
+      width: 13px;
+      height: 13px;
+      flex-shrink: 0
+    }
+
+    .chk span {
+      font-size: 12px
+    }
+
+    .btn-run {
+      width: 100%;
+      padding: 11px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s
+    }
+
+    .btn-run:hover {
+      background: var(--acc2)
+    }
+
+    .btn-run:disabled {
+      background: var(--muted2);
+      cursor: not-allowed
+    }
+
+    .pbar {
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 10px
+    }
+
+    .pbar-fill {
+      height: 3px;
+      background: var(--accent);
+      width: 0;
+      transition: width .35s
+    }
+
+    .logbox {
+      margin-top: 8px;
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      max-height: 100px;
+      overflow-y: auto;
+      line-height: 1.8
+    }
+
+    .logbox p {
+      margin: 0
+    }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      padding: 12px 20px;
+      background: var(--surf);
+      border-bottom: 1px solid var(--border)
+    }
+
+    .metric {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px
+    }
+
+    .metric-val {
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1
+    }
+
+    .metric-lbl {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-top: 3px
+    }
+
+    .ci {
+      color: var(--info)
+    }
+
+    .co {
+      color: var(--ok)
+    }
+
+    .cd {
+      color: var(--danger)
+    }
+
+    .cw {
+      color: var(--warn)
+    }
+
+    .tabs {
+      display: flex;
+      gap: 2px;
+      padding: 10px 20px 0;
+      background: var(--surf);
+      border-bottom: 1px solid var(--border)
+    }
+
+    .tab {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 7px 14px;
+      cursor: pointer;
+      color: var(--muted);
+      border-radius: 6px 6px 0 0;
+      background: none;
+      border: 1px solid transparent;
+      border-bottom: none;
+      margin-bottom: -1px;
+      transition: color .12s
+    }
+
+    .tab:hover {
+      color: var(--text)
+    }
+
+    .tab.active {
+      color: var(--text);
+      background: var(--bg);
+      border-color: var(--border);
+      border-bottom-color: var(--bg)
+    }
+
+    .tab-area {
+      flex: 1;
+      overflow: hidden
+    }
+
+    .pane {
+      display: none;
+      flex-direction: column;
+      height: 100%
+    }
+
+    .pane.active {
+      display: flex
+    }
+
+    .fbar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      align-items: center;
+      flex-wrap: wrap
+    }
+
+    .fbar input,
+    .fbar select {
+      background: var(--surf);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: var(--text);
+      font-size: 12px;
+      outline: none
+    }
+
+    .fbar input {
+      flex: 1;
+      min-width: 120px
+    }
+
+    .fbar input:focus,
+    .fbar select:focus {
+      border-color: var(--accent)
+    }
+
+    .fbar select option {
+      background: var(--surf2)
+    }
+
+    .btn-csv {
+      padding: 6px 14px;
+      background: var(--surf2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap
+    }
+
+    .btn-csv:hover {
+      color: var(--acc2);
+      border-color: var(--accent)
+    }
+
+    /* REPORT */
+    .report-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px
+    }
+
+    .sec-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      margin: 20px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .sec-title:first-child {
+      margin-top: 0
+    }
+
+    .sec-count {
+      font-size: 10px;
+      color: var(--muted2);
+      font-weight: 400;
+      margin-left: auto
+    }
+
+    /* Completed episodes summary bar */
+    .completed-eps-bar {
+      background: var(--surf2);
+      border: 1px solid rgba(61, 214, 140, .2);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px
+    }
+
+    .completed-eps-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--ok);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px
+    }
+
+    .completed-eps-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px
+    }
+
+    .ep-done {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      background: rgba(61, 214, 140, .12);
+      color: var(--ok)
+    }
+
+    .ep-partial {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      background: rgba(245, 166, 35, .1);
+      color: var(--warn)
+    }
+
+    /* VT cards */
+    .vt-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 5px
+    }
+
+    .vtc {
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow: hidden
+    }
+
+    .vtc.complete {
+      border-color: rgba(61, 214, 140, .25)
+    }
+
+    .vtc.partial {
+      border-color: rgba(245, 166, 35, .25)
+    }
+
+    .vtc.missing {
+      border-color: rgba(245, 166, 35, .25)
+    }
+
+    .vtc.notfound {
+      border-color: rgba(255, 92, 92, .35)
+    }
+
+    .vtc-hdr {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      user-select: none
+    }
+
+    .vtc-hdr:hover {
+      background: rgba(255, 255, 255, .03)
+    }
+
+    .vtc-icon {
+      font-size: 13px;
+      width: 18px;
+      flex-shrink: 0;
+      text-align: center
+    }
+
+    .vtc-name {
+      font-weight: 700;
+      font-size: 13px;
+      min-width: 110px
+    }
+
+    .vtc.complete .vtc-name {
+      color: var(--ok)
+    }
+
+    .vtc.partial .vtc-name,
+    .vtc.missing .vtc-name {
+      color: var(--warn)
+    }
+
+    .vtc.notfound .vtc-name {
+      color: var(--danger)
+    }
+
+    .vtc-info {
+      font-size: 12px;
+      color: var(--muted);
+      flex: 1
+    }
+
+    .vtc-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .vtc-mini {
+      width: 72px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden
+    }
+
+    .vtc-mini-fill {
+      height: 3px;
+      border-radius: 2px
+    }
+
+    .vtc.complete .vtc-mini-fill {
+      background: var(--ok)
+    }
+
+    .vtc.partial .vtc-mini-fill,
+    .vtc.missing .vtc-mini-fill {
+      background: var(--warn)
+    }
+
+    .vtc.notfound .vtc-mini-fill {
+      background: var(--danger)
+    }
+
+    .vtc-pct {
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 38px;
+      text-align: right
+    }
+
+    .vtc.complete .vtc-pct {
+      color: var(--ok)
+    }
+
+    .vtc.partial .vtc-pct,
+    .vtc.missing .vtc-pct {
+      color: var(--warn)
+    }
+
+    .vtc.notfound .vtc-pct {
+      color: var(--danger)
+    }
+
+    .vtc-chev {
+      font-size: 9px;
+      color: var(--muted2);
+      margin-left: 4px;
+      transition: transform .18s
+    }
+
+    .vtc.open .vtc-chev {
+      transform: rotate(90deg)
+    }
+
+    .vtc-body {
+      display: none;
+      padding: 10px 14px 13px;
+      border-top: 1px solid var(--border);
+      background: var(--bg)
+    }
+
+    .vtc.open .vtc-body {
+      display: block
+    }
+
+    .miss-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--danger);
+      margin-bottom: 7px
+    }
+
+    .del-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--ok);
+      margin: 10px 0 6px
+    }
+
+    .ep-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px
+    }
+
+    .ep {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace
+    }
+
+    .ep-ok {
+      background: rgba(61, 214, 140, .12);
+      color: var(--ok)
+    }
+
+    .ep-miss {
+      background: rgba(255, 92, 92, .12);
+      color: var(--danger)
+    }
+
+    .notfound-body {
+      font-size: 12px;
+      color: var(--danger);
+      line-height: 1.6
+    }
+
+    .notfound-eps {
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--muted)
+    }
+
+    .folder-link {
+      font-size: 11px;
+      color: var(--acc2);
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 6px
+    }
+
+    .folder-link:hover {
+      text-decoration: underline
+    }
+
+    /* TABLE */
+    .tbl-wrap {
+      flex: 1;
+      overflow: auto
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      z-index: 2
+    }
+
+    th {
+      background: var(--surf);
+      padding: 8px 16px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      border-bottom: 1px solid var(--border)
+    }
+
+    td {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      vertical-align: middle
+    }
+
+    tr.alt td {
+      background: rgba(255, 255, 255, .018)
+    }
+
+    tr:hover td {
+      background: var(--surf2)
+    }
+
+    .pill {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 99px
+    }
+
+    .pd {
+      background: rgba(255, 92, 92, .15);
+      color: var(--danger)
+    }
+
+    .pw {
+      background: rgba(245, 166, 35, .15);
+      color: var(--warn)
+    }
+
+    .pi {
+      background: rgba(91, 200, 245, .15);
+      color: var(--info)
+    }
+
+    /* MATRIX */
+    .matrix-wrap {
+      flex: 1;
+      overflow: auto;
+      padding: 0
+    }
+
+    .matrix-filter {
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0
+    }
+
+    .matrix-filter input,
+    .matrix-filter select {
+      background: var(--surf);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      color: var(--text);
+      font-size: 12px;
+      outline: none
+    }
+
+    .matrix-filter input {
+      flex: 1
+    }
+
+    .matrix-filter input:focus {
+      border-color: var(--accent)
+    }
+
+    .matrix-scroll {
+      flex: 1;
+      overflow: auto;
+      padding: 16px 20px
+    }
+
+    .matrix-tbl {
+      border-collapse: collapse;
+      font-size: 11px;
+      white-space: nowrap
+    }
+
+    .matrix-tbl th {
+      background: var(--surf);
+      padding: 5px 8px;
+      border: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      text-align: center
+    }
+
+    .matrix-tbl .vth {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      min-width: 120px;
+      text-align: left;
+      padding-left: 8px
+    }
+
+    .matrix-tbl td {
+      padding: 4px 6px;
+      border: 1px solid var(--border);
+      text-align: center;
+      font-size: 12px
+    }
+
+    .matrix-tbl .vtd {
+      text-align: left;
+      padding: 5px 10px;
+      font-weight: 600;
+      position: sticky;
+      left: 0;
+      background: var(--surf2);
+      z-index: 1;
+      cursor: pointer
+    }
+
+    .matrix-tbl .vtd:hover {
+      background: var(--surf);
+      color: var(--acc2)
+    }
+
+    .c-ok {
+      color: var(--ok)
+    }
+
+    .c-miss {
+      color: var(--danger)
+    }
+
+    .c-na {
+      color: var(--muted2)
+    }
+
+    .c-q {
+      color: var(--warn)
+    }
+
+    .legend {
+      display: flex;
+      gap: 20px;
+      padding: 10px 0 4px;
+      font-size: 11px
+    }
+
+    .statusbar {
+      padding: 6px 20px;
+      background: var(--surf);
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--muted);
+      flex-shrink: 0
+    }
+
+    .empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      flex-direction: column;
+      gap: 8px;
+      color: var(--muted);
+      padding: 40px
+    }
+
+    .empty-icon {
+      font-size: 36px
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg)
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px
+    }
+
+    .btn-google {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--surf2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      justify-content: center;
+      transition: all .15s
+    }
+
+    .btn-google:hover {
+      border-color: var(--accent);
+      color: var(--acc2)
+    }
+
+    .btn-google.connected {
+      border-color: var(--ok);
+      color: var(--ok)
+    }
+
+    .google-status {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+      text-align: center
+    }
+
+    .module-switcher {
+      display: flex;
+      gap: 4px
+    }
+
+    .mod-btn {
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: none;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .15s
+    }
+
+    .mod-btn:hover {
+      color: var(--text);
+      border-color: var(--accent)
+    }
+
+    .mod-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent)
+    }
+
+    .module {
+      display: none
+    }
+
+    /* VT Assignment styles */
+    .va-sidebar {
+      background: var(--surf);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto
+    }
+
+    .va-main {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .va-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 12px 20px;
+      background: var(--surf);
+      border-bottom: 1px solid var(--border)
+    }
+
+    .va-tabs {
+      display: flex;
+      gap: 2px;
+      padding: 10px 20px 0;
+      background: var(--surf);
+      border-bottom: 1px solid var(--border)
+    }
+
+    .va-pane {
+      display: none;
+      flex-direction: column;
+      height: 100%
+    }
+
+    .va-pane.active {
+      display: flex
+    }
+
+    .char-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px
+    }
+
+    .char-table th {
+      background: var(--surf2);
+      padding: 8px 14px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 2
+    }
+
+    .char-table td {
+      padding: 7px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle
+    }
+
+    .char-table tr:hover td {
+      background: var(--surf2)
+    }
+
+    .vt-sel {
+      background: var(--surf2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 8px;
+      color: var(--text);
+      font-size: 12px;
+      outline: none;
+      width: 160px
+    }
+
+    .vt-sel:focus {
+      border-color: var(--accent)
+    }
+
+    .va-log {
+      margin-top: 8px;
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      max-height: 120px;
+      overflow-y: auto;
+      line-height: 1.8
+    }
+
+    .va-log p {
+      margin: 0
+    }
+
+    /* MATCH MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .75);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center
+    }
+
+    .modal {
+      background: var(--surf);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: min(900px, 96vw);
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden
+    }
+
+    .modal-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      flex: 1
+    }
+
+    .modal-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px
+    }
+
+    .modal-two-col {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0
+    }
+
+    .modal-folders-panel {
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px
+    }
+
+    .modal-folders-title {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--muted2);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 6px;
+      flex-shrink: 0
+    }
+
+    .folder-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: default;
+      transition: background .1s
+    }
+
+    .folder-chip.claimed {
+      background: rgba(61, 214, 140, .1);
+      color: var(--ok)
+    }
+
+    .folder-chip.unclaimed {
+      background: rgba(245, 166, 35, .1);
+      color: var(--warn)
+    }
+
+    .folder-chip.empty-f {
+      background: rgba(255, 255, 255, .03);
+      color: var(--muted2)
+    }
+
+    .folder-chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    .folder-chip.claimed .folder-chip-dot {
+      background: var(--ok)
+    }
+
+    .folder-chip.unclaimed .folder-chip-dot {
+      background: var(--warn)
+    }
+
+    .folder-chip.empty-f .folder-chip-dot {
+      background: var(--muted2)
+    }
+
+    .folder-chip-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap
+    }
+
+    .folder-chip-count {
+      font-size: 9px;
+      opacity: .6;
+      flex-shrink: 0
+    }
+
+    .modal-match-panel {
+      overflow-y: auto;
+      flex: 1
+    }
+
+    .modal-footer {
+      padding: 10px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      flex-shrink: 0
+    }
+
+    .btn-confirm {
+      padding: 9px 20px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer
+    }
+
+    .btn-confirm:hover {
+      background: var(--acc2)
+    }
+
+    .btn-cancel {
+      padding: 9px 16px;
+      background: var(--surf2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      font-size: 13px;
+      cursor: pointer
+    }
+
+    .btn-cancel:hover {
+      color: var(--text)
+    }
+
+    .match-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px
+    }
+
+    .match-table th {
+      background: var(--surf2);
+      padding: 8px 14px;
+      text-align: left;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 1
+    }
+
+    .match-table td {
+      padding: 7px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle
+    }
+
+    .match-table tr:hover td {
+      background: rgba(255, 255, 255, .03)
+    }
+
+    .row-ok td {
+      background: rgba(61, 214, 140, .04)
+    }
+
+    .row-miss td {
+      background: rgba(255, 92, 92, .04)
+    }
+
+    .match-status {
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap
+    }
+
+    .match-folder-sel {
+      background: var(--surf2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 4px 8px;
+      color: var(--text);
+      font-size: 12px;
+      outline: none;
+      width: 100%
+    }
+
+    .match-folder-sel:focus {
+      border-color: var(--accent)
+    }
+
+    .unmatched-alert {
+      background: rgba(245, 166, 35, .08);
+      border: 1px solid rgba(245, 166, 35, .3);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin: 10px 14px 0
+    }
+
+    .unmatched-alert-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--warn);
+      margin-bottom: 4px
+    }
+
+    .unmatched-item {
+      font-size: 11px;
+      padding: 3px 0;
+      color: var(--muted)
+    }
+
+    .unmatched-item a {
+      color: var(--acc2)
+    }
+
+    /* ── DISCLAIMER (footer inline) ── */
+    .disclaimer-block {
+      margin-top: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .disclaimer-title {
+      font-family: var(--mono);
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      color: var(--red);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .disclaimer-title span {
+      margin-right: 6px;
+      opacity: 0.7;
+    }
+
+    .disclaimer-body {
+      font-family: var(--sans);
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── DISCLAIMER MODAL ── */
+    .disclaimer-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+    }
+
+    .disclaimer-modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      max-width: 520px;
+      width: 90%;
+      padding: 22px 24px;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+    }
+
+    .disclaimer-modal-header {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: var(--red);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .disclaimer-modal-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: 1px solid var(--red);
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .disclaimer-modal-body {
+      font-family: var(--sans);
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 18px;
+    }
+
+    .disclaimer-accept-btn {
+      background: var(--red);
+      border: none;
+      color: #ffffff;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 700;
+      padding: 10px 18px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .disclaimer-accept-btn:hover {
+      background: #c81515;
+    }
+
+    .version-badge {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--red);
+      border: 1px solid var(--red-dim);
+      padding: 3px 10px;
+      letter-spacing: 0.1em;
+    }
+    /* ── Gap Analysis inline styles ── */
+    .gap-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; padding:2px 7px; border-radius:4px; margin-left:6px; vertical-align:middle }
+    .gap-badge.analyzing { background:#1a1400; color:var(--yellow); border:1px solid #3a3000 }
+    .gap-badge.ok        { background:#081a0e; color:var(--ok);     border:1px solid #0f3a1e }
+    .gap-badge.warn      { background:#1a0a00; color:var(--warn);   border:1px solid #3a1e00 }
+    .gap-badge.err       { background:#1a0505; color:var(--danger); border:1px solid #3a0f0f }
+    .gap-lines-section { margin-top:10px; border-top:1px solid var(--border); padding-top:10px }
+    .gap-lines-title { font-size:11px; font-weight:600; color:var(--warn); margin-bottom:6px }
+    .gap-ep-block { margin-bottom:8px }
+    .gap-ep-lbl { font-size:10px; color:var(--muted); font-family:'Courier New',monospace; margin-bottom:3px; text-transform:uppercase; letter-spacing:.05em }
+    .gap-line-row { font-size:11px; font-family:'Courier New',monospace; padding:3px 8px; background:var(--surface); border-left:2px solid var(--warn); margin-bottom:2px; border-radius:0 3px 3px 0 }
+    .gap-line-ts  { color:var(--muted); margin-right:6px }
+    .gap-line-char{ color:var(--acc2); margin-right:6px; font-weight:600 }
+    .gap-line-txt { color:var(--text) }
+    .gap-line-rms { color:var(--muted); margin-left:6px; font-size:10px }
+    .gap-ok-msg   { font-size:11px; color:var(--ok); margin-top:6px }
+    .gap-spinner  { display:inline-block; width:10px; height:10px; border:2px solid transparent; border-top-color:currentColor; border-radius:50%; animation:spin .7s linear infinite }
+    @keyframes spin { to { transform:rotate(360deg) } }
+    .m-gap-metric { display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 16px; border-left:1px solid var(--border) }
+    .gap-prog-bar { height:3px; background:var(--surface2); border-radius:2px; overflow:hidden; margin-top:4px }
+    .gap-prog-fill-bar { height:100%; background:var(--accent); border-radius:2px; transition:width .2s; width:0% }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <img src="hark-mid.png" alt="Hark" style="height:38px;width:auto;object-fit:contain">
+      <div>
+        <div class="topbar-title">PM <em>Dubbing Tools</em> <span class="version-badge" id="app-version">2.1.4</span>
+        </div>
+      </div>
+    </div>
+    <span id="show-name" style="font-size:12px;color:var(--acc2);font-weight:600;margin-left:6px"></span>
+    <div class="spacer"></div>
+    <div class="module-switcher">
+      <button class="mod-btn" id="mod-assignment" onclick="switchModule('assignment')">📝 VT Assignment</button>
+      <button class="mod-btn active" id="mod-delivery" onclick="switchModule('delivery')">📦 Delivery Check</button>
+    </div>
+    <button class="btn-google" id="btn-google-login" onclick="googleSignIn()"
+      style="width:auto;margin-left:10px;padding:6px 12px">
+      <svg width="14" height="14" viewBox="0 0 48 48">
+        <path fill="#EA4335"
+          d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+        <path fill="#4285F4"
+          d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+        <path fill="#FBBC05"
+          d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+        <path fill="#34A853"
+          d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+      </svg>
+      <span id="google-btn-text">Sign in</span>
+    </button>
+  </div>
+  <!-- ══ VT ASSIGNMENT MODULE ══════════════════════════════ -->
+  <div class="layout module" id="module-assignment" style="display:none">
+    <aside class="va-sidebar sidebar">
+
+      <!-- MODE TOGGLE -->
+      <div class="sb-sec">
+        <div class="sb-lbl">Input mode</div>
+        <div style="display:flex;gap:4px;margin-bottom:8px">
+          <button class="mod-btn active" id="va-mode-a" onclick="vaSetMode('drive')"
+            style="flex:1;padding:6px;font-size:11px">🔗 Drive links</button>
+          <button class="mod-btn" id="va-mode-b" onclick="vaSetMode('local')"
+            style="flex:1;padding:6px;font-size:11px">📁 Local files</button>
+        </div>
+      </div>
+
+      <!-- OPTION A: Drive links -->
+      <div id="va-mode-drive">
+        <div class="sb-sec">
+          <div class="sb-lbl">Characters sheet</div>
+          <div class="field"><label>Google Sheet ID or link</label><input id="va-sid" type="text"
+              placeholder="SRT Review Report Sheet URL" title="SRT Review Report — Google Sheets with a Characters tab">
+          </div>
+          <div class="field"><label>Tab name</label><input id="va-sname" type="text" value="Characters"
+              placeholder="Characters"></div>
+        </div>
+        <div class="sb-sec">
+          <div class="sb-lbl">SRT folder</div>
+          <div class="field"><label>Drive folder with SRTs</label><input id="va-fid" type="text"
+              placeholder="Folder ID or full Google Drive link"
+              title="Google Drive folder containing the SRT files (one SRT per episode)"></div>
+          <p class="hint">Requires Google sign-in (button top right). One SRT per episode.</p>
+        </div>
+      </div>
+
+      <!-- OPTION B: Local files -->
+      <div id="va-mode-local" style="display:none">
+        <div class="sb-sec">
+          <div class="sb-lbl">Characters sheet</div>
+          <label id="va-sheet-label"
+            style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--muted);margin:0 16px 8px">
+            <span>📊</span><span id="va-sheet-text">Select Excel (.xlsx)…</span>
+            <input type="file" id="va-sheet-file" accept=".xlsx,.xls" style="display:none"
+              onchange="vaSheetFileSelected(this)">
+          </label>
+          <div class="field" style="padding:0 16px 0">
+            <label style="font-size:10px;color:var(--muted)">Tab name</label>
+            <input id="va-sname-local" type="text" value="Characters" placeholder="Characters"
+              style="width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;outline:none">
+          </div>
+        </div>
+        <div class="sb-sec">
+          <div class="sb-lbl">SRT files</div>
+          <label id="va-upload-label"
+            style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--muted);margin:0 16px 8px">
+            <span>📂</span><span id="va-upload-text">Select SRTs or ZIP…</span>
+            <input type="file" id="va-srt-files" accept=".srt,.zip" multiple style="display:none"
+              onchange="vaFilesSelected(this)">
+          </label>
+          <p class="hint" style="padding:0 16px">Select individual .srt files, multiple .srt files, or a .zip containing
+            SRTs.</p>
+        </div>
+      </div>
+
+      <!-- CONTROL LINES PER VT -->
+      <div class="sb-sec">
+        <div class="sb-lbl">Control Lines per VT</div>
+        <div style="display:flex;gap:4px;margin:0 16px 8px">
+          <button class="mod-btn active" id="va-ctrl-mode-local" onclick="vaCtrlSetMode('local')"
+            style="flex:1;padding:6px;font-size:11px">📁 Local file</button>
+          <button class="mod-btn" id="va-ctrl-mode-drive" onclick="vaCtrlSetMode('drive')"
+            style="flex:1;padding:6px;font-size:11px">🔗 Drive link</button>
+        </div>
+        <!-- Local file -->
+        <div id="va-ctrl-local">
+          <label id="va-ctrl-label"
+            style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surf2);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:12px;color:var(--muted);margin:0 16px 8px">
+            <span>📊</span><span id="va-ctrl-text">Upload Full Script Excel…</span>
+            <input type="file" id="va-ctrl-file" accept=".xlsx,.xls" style="display:none"
+              onchange="vaCtrlFileSelected(this)">
+          </label>
+        </div>
+        <!-- Drive link -->
+        <div id="va-ctrl-drive" style="display:none">
+          <div class="field" style="padding:0 16px 4px">
+            <input id="va-ctrl-drive-id" type="text" placeholder="Google Sheets or Drive file ID / link"
+              title="Full Script: Google Sheets with a 'Full Script' tab, or an Excel (.xlsx) file on Google Drive"
+              style="width:100%;background:var(--surf2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;outline:none;box-sizing:border-box">
+          </div>
+          <p class="hint" style="padding:0 16px 4px">Google Sheets or .xlsx file on Drive. For private files, sign in
+            with Google.</p>
+        </div>
+        <div style="display:flex;gap:6px;padding:0 16px 4px">
+          <button class="btn-run" id="va-ctrl-btn" onclick="vaControlLines()"
+            style="flex:1;font-size:11px;padding:7px 8px">▶ Count Lines per VT</button>
+          <button class="btn-csv" id="va-ctrl-export" onclick="vaCtrlExport()" style="display:none;padding:7px 10px"
+            title="Download Lines per VT">↓</button>
+        </div>
+      </div>
+
+      <div class="sb-sec" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end">
+        <button class="btn-run" id="va-btn-run" onclick="vaRun()">▶ Generate Full Script</button>
+        <div class="pbar">
+          <div class="pbar-fill" id="va-pbar"></div>
+        </div>
+        <div class="va-log" id="va-logbox"></div>
+      </div>
+    </aside>
+    <main class="va-main main">
+      <div class="va-metrics metrics">
+        <div class="metric">
+          <div class="metric-val ci" id="va-m-eps">—</div>
+          <div class="metric-lbl">Episodes</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val co" id="va-m-lines">—</div>
+          <div class="metric-lbl">Total lines</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val cw" id="va-m-chars">—</div>
+          <div class="metric-lbl">Characters</div>
+        </div>
+      </div>
+      <div class="va-tabs tabs">
+        <button class="tab active" onclick="vaShowTab('chars',this)">Characters & VT</button>
+        <button class="tab" onclick="vaShowTab('summary',this)">Lines per VT</button>
+      </div>
+      <div class="tab-area">
+        <div class="va-pane active" id="va-pane-chars">
+          <div class="fbar">
+            <span style="font-size:11px;color:var(--muted)">Assign VTs to characters, then click Generate Full
+              Script</span>
+            <div class="spacer"></div>
+            <button class="btn-csv" onclick="vaExport()">↓ Excel</button>
+          </div>
+          <div class="tbl-wrap">
+            <table class="char-table" id="va-char-table">
+              <thead>
+                <tr>
+                  <th>Character</th>
+                  <th>Gender</th>
+                  <th>Lines</th>
+                  <th>Episodes</th>
+                  <th>VT Assignment</th>
+                </tr>
+              </thead>
+              <tbody id="va-char-tbody">
+                <tr>
+                  <td colspan="5">
+                    <div class="empty"><span class="empty-icon">📝</span>Run to load characters</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="va-pane" id="va-pane-summary">
+          <div class="fbar">
+            <span style="font-size:11px;color:var(--muted)">Lines assigned per VT across all episodes</span>
+            <div class="spacer"></div>
+            <button class="btn-csv" onclick="vaExport()">↓ Excel</button>
+          </div>
+          <div class="tbl-wrap">
+            <table class="char-table" id="va-summary-table">
+              <thead>
+                <tr>
+                  <th>VT</th>
+                  <th>Total lines</th>
+                  <th>Characters</th>
+                  <th>Episodes</th>
+                </tr>
+              </thead>
+              <tbody id="va-summary-tbody">
+                <tr>
+                  <td colspan="4">
+                    <div class="empty"><span class="empty-icon">📊</span>No data</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="statusbar" id="va-statusbar">Load the SRT Review Report and SRT folder to get started.</div>
+    </main>
+  </div>
+
+  <!-- ══ DELIVERY CHECK MODULE ═════════════════════════════ -->
+  <div class="layout module active" id="module-delivery" style="display:grid">
+    <aside class="sidebar">
+      <div class="sb-sec">
+        <div class="sb-lbl">Configuration</div>
+        <div class="field"><label>Google Sheet ID or link</label><input id="sid" type="text"
+            placeholder="Sheet ID or full Google Sheets URL"></div>
+        <div class="field"><label>Script sheet tab name</label><input id="sname" type="text"
+            placeholder="Exact tab name (e.g. GUION COMPLETO)"></div>
+        <div class="field"><label>Drive deliveries folder</label><input id="fid" type="text"
+            placeholder="Folder ID or full Google Drive link"></div>
+        <p class="hint">Sheet and folder must be shared as <strong style="color:var(--text)">"anyone with the link can
+            view"</strong>. If the sheet has active filters, <strong style="color:var(--warn)">remove or disable
+            them</strong> before running — filters hide rows from the analysis.</p>
+      </div>
+
+      <div class="sb-sec">
+        <div class="sb-lbl">Additional QA checks</div>
+        <div class="checks">
+          <label class="chk"><input type="checkbox" id="chk-empty" checked><span>Empty file (&lt;15 KB)</span></label>
+          <label class="chk"><input type="checkbox" id="chk-small" checked><span>Very small file (&lt;60
+              KB)</span></label>
+          <label class="chk"><input type="checkbox" id="chk-naming" checked><span>Non-standard filename</span></label>
+          <label class="chk"><input type="checkbox" id="chk-recent"><span>Uploaded less than 2 hs ago</span></label>
+        </div>
+      </div>
+      <div class="sb-sec" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end">
+        <button class="btn-run" id="btn-run" onclick="run()">▶ Run analysis</button>
+        <div class="pbar">
+          <div class="pbar-fill" id="pbar"></div>
+        </div>
+        <div class="logbox" id="logbox"></div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-val ci" id="m-exp">—</div>
+          <div class="metric-lbl">Expected</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val co" id="m-del">—</div>
+          <div class="metric-lbl">Delivered</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val cd" id="m-mis">—</div>
+          <div class="metric-lbl">Missing</div>
+        </div>
+        <div class="metric">
+          <div class="metric-val cw" id="m-qa">—</div>
+          <div class="metric-lbl">QA Issues</div>
+        </div>
+        <div class="metric" id="m-gap-wrap" style="display:none">
+          <div class="metric-val" id="m-gap-val" style="font-size:13px;color:var(--yellow)"><span class="gap-spinner"></span></div>
+          <div class="metric-lbl">Gap Analysis</div>
+          <div class="gap-prog-bar" style="width:60px"><div class="gap-prog-fill-bar" id="gap-prog-main"></div></div>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('report',this)">Report by VT</button>
+        <button class="tab" onclick="showTab('qa',this)">QA Issues</button>
+        <button class="tab" onclick="showTab('matrix',this)">Matrix</button>
+        <button class="tab" id="tab-unmatched" onclick="showTab('unmatched',this)" style="display:none">⚠ Unmatched
+          folders</button>
+      </div>
+      <div class="tab-area">
+        <!-- REPORT -->
+        <div class="pane active" id="pane-report">
+          <div class="fbar">
+            <input type="text" id="q-report" placeholder="Search VT..." oninput="filterReport()">
+            <select id="f-status" onchange="filterReport()">
+              <option value="">All VTs</option>
+              <option value="notfound">✗ No folder</option>
+              <option value="partial">⚠ Incomplete</option>
+              <option value="missing">⚠ No deliveries</option>
+              <option value="complete">✓ Complete</option>
+            </select>
+            <button class="btn-csv" onclick="exportReport()">↓ Excel</button>
+          </div>
+          <div class="report-wrap" id="report-wrap">
+            <div class="empty"><span class="empty-icon">📋</span>Run the analysis to see results</div>
+          </div>
+        </div>
+        <!-- QA -->
+        <div class="pane" id="pane-qa">
+          <div class="fbar">
+            <input type="text" placeholder="Search..." oninput="filterTbl('tbl-qa',this.value)">
+            <select onchange="filterSev(this.value)">
+              <option value="">All severities</option>
+              <option value="danger">⛔ Danger</option>
+              <option value="warning">⚠ Warning</option>
+              <option value="info">ℹ Info</option>
+            </select>
+            <button class="btn-csv" onclick="exportCSV()">↓ Excel</button>
+          </div>
+          <div class="tbl-wrap">
+            <table id="tbl-qa">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>VT</th>
+                  <th>Type</th>
+                  <th>Detail</th>
+                </tr>
+              </thead>
+              <tbody id="body-qa">
+                <tr>
+                  <td colspan="4">
+                    <div class="empty"><span class="empty-icon">🔍</span>No data</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <!-- MATRIX -->
+        <div class="pane" id="pane-matrix" style="flex-direction:column">
+          <div class="matrix-filter">
+            <input type="text" id="q-matrix" placeholder="Filter by VT name..." oninput="filterMatrix()">
+            <select id="f-matrix-status" onchange="filterMatrix()">
+              <option value="">All VTs</option>
+              <option value="complete">✓ Complete only</option>
+              <option value="partial">⚠ Incomplete only</option>
+              <option value="notfound">✗ No folder</option>
+            </select>
+          </div>
+          <div class="matrix-scroll">
+            <div id="matrix-wrap">
+              <div class="empty"><span class="empty-icon">📊</span>No data</div>
+            </div>
+          </div>
+        </div>
+        <!-- UNMATCHED FOLDERS -->
+        <div class="pane" id="pane-unmatched">
+          <div class="fbar">
+            <span style="font-size:12px;color:var(--warn);font-weight:600">⚠ Folders in Drive with audio that don't
+              match any VT in the script</span>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Folder name</th>
+                  <th>Audio files</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="body-unmatched"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="statusbar" id="statusbar">Enter Sheet ID and Folder ID, then click Run analysis.</div>
+    </main>
+  </div><!-- /module-delivery -->
+
+  <!-- MATCH REVIEW MODAL -->
+  <div class="modal-overlay" id="match-modal" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">🔗 VT → Folder matching</div>
+          <div class="modal-sub">Review how VTs from the script are matched to Drive folders. Fix any wrong matches
+            before running.</div>
+        </div>
+      </div>
+      <div class="modal-two-col">
+        <div class="modal-folders-panel">
+          <div class="modal-folders-title">📁 Drive folders</div>
+          <div id="folders-panel-list"></div>
+        </div>
+        <div class="modal-match-panel">
+          <div id="unmatched-folders-alert"></div>
+          <table class="match-table">
+            <thead>
+              <tr>
+                <th>VT (from script)</th>
+                <th>Assign folder</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="match-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeMatchModal()">Cancel</button>
+        <button class="btn-confirm" onclick="confirmMatching()">✓ Looks good — run analysis</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+    const DEFAULTS = { sid: '1uJs387TBHVchInhFZifihGxX333AVnWwjF8eS6BLkn0', sname: 'Guion sabana', fid: '1gUZJhSW1i3-7rMaUzDhZ2c3-5Z4cM3Hw' };
+    let API_KEY = 'AIzaSyCmI5gCYkkzxo-h7oUJw8SZyIF6KhpJ1Ik';
+    const DRIVE = 'https://www.googleapis.com/drive/v3/files';
+    let STATE = { combos: [], files: [], subfolders: [], vtReports: [], qa: [] };
+
+    (function init() {
+      try {
+        const p = JSON.parse(localStorage.getItem('dqa') || '{}');
+        g('sid').value = p.sid || DEFAULTS.sid;
+        g('sname').value = p.sname || DEFAULTS.sname;
+        g('fid').value = p.fid || DEFAULTS.fid;
+        if (p.apikey) API_KEY = p.apikey;
+      } catch { }
+    })();
+
+    function g(id) { return document.getElementById(id); }
+    function v(id) { return g(id).value.trim(); }
+    function log(m) { const e = g('logbox'); e.innerHTML += `<p>› ${m}</p>`; e.scrollTop = e.scrollHeight; }
+    function setPbar(p) { g('pbar').style.width = p + '%'; }
+    function setStat(m) { g('statusbar').textContent = m; }
+    function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+    function today() { return new Date().toISOString().slice(0, 10); }
+    function fmtKb(kb) { return kb < 1024 ? kb.toFixed(1) + ' KB' : (kb / 1024).toFixed(1) + ' MB'; }
+
+    function extractSheetId(input) {
+      const m = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+      return m ? m[1] : input.trim();
+    }
+    function extractFolderId(input) {
+      const m = input.match(/\/folders\/([a-zA-Z0-9_-]+)/) || input.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      return m ? m[1] : input.trim();
+    }
+
+    // ── Drive API ─────────────────────────────────────────────────
+    async function driveQ(q, fields, pt) {
+      const p = new URLSearchParams({ key: API_KEY, q, fields, pageSize: 200, supportsAllDrives: 'true', includeItemsFromAllDrives: 'true' });
+      if (pt) p.set('pageToken', pt);
+      const r = await fetch(`${DRIVE}?${p}`);
+      if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error(`Drive API ${r.status}: ${e?.error?.message || r.statusText}`); }
+      return r.json();
+    }
+
+    async function scanDrive(folderId) {
+      const audioRe = /\.(wav|mp3|aif|aiff|flac|ogg|m4a|wma|aac)$/i;
+      const zipRe = /\.zip$/i;
+      const anyAudioOrZip = /\.(wav|mp3|aif|aiff|flac|ogg|m4a|wma|aac|zip)$/i;
+
+      function makeFile(f, folderName, folderId, folderUrl) {
+        const isZip = zipRe.test(f.name);
+        const isNonWav = audioRe.test(f.name) && !/\.wav$/i.test(f.name);
+        return {
+          name: f.name, stem: f.name.replace(/\.[^.]+$/, '').toLowerCase(),
+          folder: folderName, folderId,
+          size: parseInt(f.size || 0), sizeKb: parseInt(f.size || 0) / 1024,
+          mimeType: f.mimeType, modified: f.modifiedTime,
+          id: f.id, isZip, isNonWav,
+          url: `https://drive.google.com/file/d/${f.id}/view`,
+          folderUrl,
+        };
+      }
+
+      // 1. Get subfolders
+      const subs = []; let pt = '';
+      do {
+        const d = await driveQ(`'${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`, 'nextPageToken,files(id,name)', pt);
+        subs.push(...(d.files || [])); pt = d.nextPageToken || '';
+      } while (pt);
+      log(`${subs.length} VT folders found`);
+
+      const files = [];
+      const rootFolderUrl = `https://drive.google.com/drive/folders/${folderId}`;
+
+      // 2. Scan files inside each subfolder
+      for (const sub of subs) {
+        const subFolderUrl = `https://drive.google.com/drive/folders/${sub.id}`;
+        let pt2 = '';
+        do {
+          const d = await driveQ(`'${sub.id}' in parents and trashed=false`, 'nextPageToken,files(id,name,size,mimeType,modifiedTime)', pt2);
+          for (const f of (d.files || [])) {
+            if (!anyAudioOrZip.test(f.name)) continue;
+            files.push(makeFile(f, sub.name, sub.id, subFolderUrl));
+          }
+          pt2 = d.nextPageToken || '';
+        } while (pt2);
+        log(`  ${sub.name} ✓`);
+      }
+
+      // 3. Also scan files directly in the root folder (no subfolder)
+      // These use the filename to infer the VT name
+      let pt3 = '';
+      const rootFiles = [];
+      do {
+        const d = await driveQ(`'${folderId}' in parents and mimeType!='application/vnd.google-apps.folder' and trashed=false`, 'nextPageToken,files(id,name,size,mimeType,modifiedTime)', pt3);
+        for (const f of (d.files || [])) {
+          if (!anyAudioOrZip.test(f.name)) continue;
+          rootFiles.push(f);
+        }
+        pt3 = d.nextPageToken || '';
+      } while (pt3);
+
+      if (rootFiles.length) {
+        log(`${rootFiles.length} files found directly in root folder`);
+        // For root files, extract VT name from filename
+        // Format: ShowName_EP01_PT_VTName.wav → VT = "VTName"
+        // Or: EP01_VTName.wav → VT = "VTName"
+        for (const f of rootFiles) {
+          // Try to extract VT name: last segment after last underscore before extension
+          const stem = f.name.replace(/\.[^.]+$/, '');
+          // Pattern: anything_EP##_PT_VTNAME or anything_EP##_VTNAME
+          const m = stem.match(/[_\-](?:PT[_\-])?([^_\-]+)$/i);
+          const vtName = m ? m[1] : '_root_';
+          // Use vtName as a virtual "folder" name for matching purposes
+          files.push(makeFile(f, vtName, folderId, rootFolderUrl));
+        }
+        // Add virtual "folders" for root VTs so they appear in match modal
+        const rootVTs = [...new Set(rootFiles.map(f => {
+          const stem = f.name.replace(/\.[^.]+$/, '');
+          const m = stem.match(/[_\-](?:PT[_\-])?([^_\-]+)$/i);
+          return m ? m[1] : '_root_';
+        }))];
+        rootVTs.forEach(vt => {
+          if (!subs.find(s => s.name === vt)) {
+            subs.push({ id: folderId, name: vt, isVirtual: true });
+          }
+        });
+        log(`  Root files assigned to VTs: ${rootVTs.join(', ')}`);
+      }
+
+      const subMap = {};
+      subs.forEach(s => subMap[s.name] = { id: s.id, url: s.isVirtual ? rootFolderUrl : `https://drive.google.com/drive/folders/${s.id}` });
+      return { subs, files, subMap };
+    }
+
+    // ── Sheet ─────────────────────────────────────────────────────
+    async function fetchSheetTitle(sid) {
+      // Fetch the spreadsheet title from the og:title meta tag
+      try {
+        const url = `https://docs.google.com/spreadsheets/d/${sid}/edit`;
+        const r = await fetch(url);
+        if (!r.ok) return null;
+        const html = await r.text();
+        const m = html.match(/<title[^>]*>([^<]+)<\/title>/i) || html.match(/og:title[^>]+content="([^"]+)"/i);
+        if (m) {
+          // Clean up: remove " - Google Sheets" suffix and file extension
+          return m[1].replace(/\s*[-–]\s*Google Sheets.*$/i, '').replace(/\.xlsx$/i, '').trim();
+        }
+      } catch { }
+      return null;
+    }
+
+    async function fetchSheet(sid, sname) {
+      // gviz endpoints are more reliable for selecting a sheet by name.
+      // The /export endpoint sometimes ignores the sheet= param and returns
+      // the first/active sheet instead — keep it as last-resort fallback.
+      const encName = encodeURIComponent(sname);
+      const endpoints = [
+        `https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&sheet=${encName}&tq=select%20*&headers=1`,
+        `https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&sheet=${encName}&range=A:Z&headers=1`,
+        `https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&sheet=${encName}`,
+        // export endpoint last — can ignore sheet= and return the wrong tab
+        `https://docs.google.com/spreadsheets/d/${sid}/export?format=csv&sheet=${encName}`,
+      ];
+      let rows = null, lastErr = '';
+      for (const url of endpoints) {
+        try {
+          const r = await fetch(url);
+          if (!r.ok) { lastErr = `HTTP ${r.status}`; continue; }
+          const t = await r.text();
+          if (t.trim().startsWith('<')) { lastErr = 'Got HTML — sheet may not be public'; continue; }
+          if (t.trim().length < 10) { lastErr = 'Empty response'; continue; }
+          const parsed = parseCSV(t);
+          if (!parsed.length) { lastErr = 'Empty CSV'; continue; }
+          const hdrs = parsed[0].map(h => h.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''));
+          const hasEp = hdrs.some(h => h === 'EPISODE' || h === 'EP');
+          const hasVt = hdrs.some(h => h === 'VT');
+          if (!hasEp || !hasVt) {
+            // This endpoint returned the wrong sheet — try the next one
+            lastErr = `Wrong sheet returned (columns: ${parsed[0].join(', ')})`;
+            continue;
+          }
+          rows = parsed; break;
+        } catch (e) { lastErr = e.message; }
+      }
+      if (!rows) throw new Error(`Could not find EPISODE/VT columns in the "${sname}" tab. Last error: ${lastErr}. Make sure the tab name is correct and the sheet is shared as "Anyone with the link can view".`);
+      const hdrs = rows[0].map(h => h.trim().toUpperCase().replace(/[^A-Z0-9]/g, ''));
+      const ei = hdrs.findIndex(h => h === 'EPISODE' || h === 'EP');
+      const vi = hdrs.findIndex(h => h === 'VT');
+      // Extra columns for gap analysis
+      const tiIdx  = hdrs.findIndex(h => h === 'TIMESTAMPIN' || h === 'TIMEIN' || h === 'IN' || h === 'ENTRADA');
+      const toIdx  = hdrs.findIndex(h => h === 'TIMESTAMPOUT' || h === 'TIMEOUT' || h === 'OUT' || h === 'SALIDA');
+      const chIdx  = hdrs.findIndex(h => h === 'CHARACTER' || h === 'PERSONAJE' || h === 'CHAR');
+      const scIdx  = hdrs.findIndex(h => h === 'SCRIPT' || h === 'TEXT' || h === 'TEXTO' || h === 'DIALOGO');
+      const seen = new Set(), out = [], scriptLines = [];
+      for (const row of rows.slice(1)) {
+        const ep = (row[ei] || '').trim(), vt = (row[vi] || '').trim();
+        if (ep && vt && !seen.has(ep + '|' + vt)) { seen.add(ep + '|' + vt); out.push({ ep, vt }); }
+        // Collect every line (including duplicates per ep×vt) for gap analysis
+        const timeIn  = tiIdx >= 0 ? (row[tiIdx] || '').trim() : '';
+        const timeOut = toIdx >= 0 ? (row[toIdx] || '').trim() : '';
+        if (ep && vt && timeIn && timeOut) {
+          scriptLines.push({
+            episode:   ep,
+            vt,
+            timeIn,
+            timeOut,
+            character: chIdx >= 0 ? (row[chIdx] || '').trim() : '',
+            script:    scIdx >= 0 ? (row[scIdx] || '').trim() : '',
+          });
+        }
+      }
+      if (!out.length) throw new Error('No EP/VT combinations found. Check the tab name is correct.');
+      return [out, scriptLines];
+    }
+
+    function parseCSV(text) {
+      const rows = [];
+      for (const line of text.split('\n')) {
+        if (!line.trim()) continue;
+        const row = []; let cur = '', inQ = false;
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (c === '"') { inQ = !inQ; } else if (c === ',' && !inQ) { row.push(cur); cur = ''; } else cur += c;
+        }
+        row.push(cur);
+        rows.push(row.map(c => c.replace(/^"|"$/g, '').replace(/""/g, '"')));
+      }
+      return rows;
+    }
+
+    // ── Matching ──────────────────────────────────────────────────
+    function norm(s) { return (s || '').toLowerCase().replace(/[\s\-_.]+/g, ' ').trim(); }
+
+    function extractName(s) {
+      let c = (s || '').replace(/\s*[-\u2013]\s*[A-Z]{2,6}\s*\(\d+\)/gi, '')
+        .replace(/\s*\([^)]*\)/g, '')
+        .replace(/\s*[-\u2013]\s*[A-Z0-9]{2,10}$/gi, '')
+        .replace(/\s+/g, ' ').trim();
+      return c.toLowerCase();
+    }
+
+    function nameTokens(s) {
+      return extractName(s).split(/\s+/).filter(w => w.length >= 3);
+    }
+
+    function extractCode(s) {
+      const m = (s || '').match(/[-\u2013]\s*([A-Z]{2,6})\s*\(\d+\)/i);
+      return m ? m[1].toLowerCase() : null;
+    }
+
+    function extractFirstName(s) {
+      // Remove codes like "- VDS(051)" then get first word
+      let c = (s || '').replace(/\s*[-\u2013]\s*[A-Z]{2,6}\s*\(\d+\)/gi, '')
+        .replace(/\s*\([^)]*\)/g, '')
+        .replace(/\s*[-\u2013]\s*[A-Z0-9]{2,10}$/gi, '')
+        .replace(/\s+/g, ' ').trim();
+      return c.toLowerCase().split(' ')[0] || '';
+    }
+
+    function vtMatch(a, b, customMap) {
+      // Check custom mapping first (e.g. "Vivian - VDS(051)" -> "Vivian Olivieri")
+      if (customMap) {
+        const mapped = customMap[norm(a)] || customMap[norm(b)];
+        if (mapped && (norm(mapped) === norm(b) || norm(mapped) === norm(a))) return true;
+      }
+      const na = norm(a), nb = norm(b);
+      if (na === nb) return true;
+      // Clean names (remove codes)
+      const ca = extractName(a), cb = extractName(b);
+      if (ca && cb && (ca === cb || ca.includes(cb) || cb.includes(ca))) return true;
+      // First name match
+      const fa = extractFirstName(a), fb = extractFirstName(b);
+      if (fa && fb && fa === fb && fa.length > 2) return true;
+      const ta = nameTokens(a), tb = nameTokens(b);
+      const sh = ta.length <= tb.length ? ta : tb;
+      const lo = ta.length <= tb.length ? tb : ta;
+      if (sh.length > 0 && sh.every(t => lo.some(l => l.startsWith(t) || t.startsWith(l)))) return true;
+      return na.includes(nb) || nb.includes(na);
+    }
+
+    function epMatch(stem, ep) {
+      const raw = ep.replace(/[^0-9]/g, '');      // '01' from 'EP01'
+      const noLead = String(parseInt(raw, 10));   // '1'  (strip leading zeros)
+      const padded = noLead.padStart(2, '0');     // '01'
+      // Build all variants: with and without leading zeros
+      const nums = [...new Set([raw, noLead, padded])];
+      for (const num of nums) {
+        for (const pfx of ['ep', 'e', 'ep_', 'e_']) {
+          const target = pfx + num;
+          const idx = stem.indexOf(target);
+          if (idx < 0) continue;
+          const after = stem[idx + target.length];
+          if (after === undefined || !/[0-9]/.test(after)) return true;
+        }
+        if (stem === num || stem === padded) return true;
+        // Bare number surrounded by non-digits
+        if (new RegExp('(?<![0-9])0*' + noLead + '(?![0-9])').test(stem)) return true;
+      }
+      return false;
+    }
+
+    // ── Build reports ─────────────────────────────────────────────
+    function buildReports(combos, files, subs, subMap, customMap) {
+      const vtNames = [...new Set(combos.map(c => c.vt))].sort();
+      const reports = [];
+      const usedFolders = new Set(); // track already-assigned folders
+      for (const vt of vtNames) {
+        const vtC = combos.filter(c => c.vt === vt);
+        // Find best matching folder that hasn't been claimed yet
+        const matchedSub = subs.find(s => vtMatch(vt, s.name, customMap) && !usedFolders.has(s.name));
+        const folderName = matchedSub?.name || null;
+        if (folderName) usedFolders.add(folderName);
+        const folderUrl = folderName && subMap[folderName] ? subMap[folderName].url : null;
+        if (!folderName) {
+          reports.push({ vt, status: 'notfound', folderName: null, folderUrl: null, total: vtC.length, delivered: 0, missing: vtC.map(c => c.ep), deliveredList: [] });
+          continue;
+        }
+        const inF = files.filter(f => f.folder === folderName);
+        const deliveredList = [], missing = [];
+        for (const { ep } of vtC) {
+          if (inF.some(f => epMatch(f.stem, ep))) deliveredList.push(ep);
+          else missing.push(ep);
+        }
+        const pct = deliveredList.length / vtC.length;
+        const status = pct === 1 ? 'complete' : missing.length === vtC.length ? 'missing' : 'partial';
+        reports.push({ vt, status, folderName, folderUrl, total: vtC.length, delivered: deliveredList.length, missing, deliveredList });
+      }
+      const ord = { notfound: 0, missing: 1, partial: 2, complete: 3 };
+      reports.sort((a, b) => ord[a.status] - ord[b.status]);
+      return reports;
+    }
+
+    // Compute completed episodes (all VTs that appear in that ep have delivered)
+    function getCompletedEpisodes(combos, vtReports) {
+      const eps = [...new Set(combos.map(c => c.ep))].sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+      const missSet = new Set(vtReports.flatMap(r => r.missing.map(ep => r.vt + '|' + ep)));
+      const nfSet = new Set(vtReports.filter(r => r.status === 'notfound').map(r => r.vt));
+      const completed = [], almost = [];  // almost = missing exactly 1 VT
+      for (const ep of eps) {
+        const vtForEp = combos.filter(c => c.ep === ep).map(c => c.vt);
+        // Count VTs that have NOT delivered for this episode
+        const missingVTs = vtForEp.filter(vt => nfSet.has(vt) || missSet.has(vt + '|' + ep));
+        if (missingVTs.length === 0) completed.push(ep);
+        else if (missingVTs.length === 1) almost.push({ ep, missingVT: missingVTs[0] });
+      }
+      return { completed, almost };
+    }
+
+    // ── QA ────────────────────────────────────────────────────────
+    function runQA(files, checks) {
+      const out = [];
+      for (const f of files) {
+        // ZIP file — flag always regardless of checks
+        if (f.isZip) {
+          out.push({
+            file: f.name, folder: f.folder, fileUrl: f.url, folderUrl: f.folderUrl,
+            severity: 'warning', type: 'ZIP file',
+            detail: 'Compressed file — needs to be extracted before QA'
+          });
+          continue; // skip size checks for ZIPs
+        }
+        // Non-WAV audio
+        if (f.isNonWav) {
+          out.push({
+            file: f.name, folder: f.folder, fileUrl: f.url, folderUrl: f.folderUrl,
+            severity: 'info', type: 'Non-WAV format',
+            detail: `${f.name.split('.').pop().toUpperCase()} file — expected WAV`
+          });
+        }
+        if (checks.empty && f.sizeKb < 15) {
+          out.push({ file: f.name, folder: f.folder, fileUrl: f.url, folderUrl: f.folderUrl, severity: 'danger', type: 'Empty file', detail: `${fmtKb(f.sizeKb)} — no audio detected` });
+          continue;
+        }
+        if (checks.small && f.sizeKb >= 15 && f.sizeKb < 60)
+          out.push({ file: f.name, folder: f.folder, fileUrl: f.url, folderUrl: f.folderUrl, severity: 'warning', type: 'Very small file', detail: `${fmtKb(f.sizeKb)} — possibly less than 1 second` });
+        if (checks.naming && !/EP\d+/i.test(f.name))
+          out.push({ file: f.name, folder: f.folder, fileUrl: f.url, folderUrl: f.folderUrl, severity: 'warning', type: 'Non-standard filename', detail: 'Does not follow EP##_VT format' });
+        if (checks.recent && f.modified) {
+          const h = (Date.now() - new Date(f.modified)) / 3600000;
+          if (h < 2) out.push({ file: f.name, folder: f.folder, fileUrl: f.url, folderUrl: f.folderUrl, severity: 'info', type: 'Recently uploaded', detail: `Modified ${h.toFixed(1)}h ago` });
+        }
+      }
+      return out;
+    }
+
+    // ── Main run ──────────────────────────────────────────────────
+    async function run() {
+      const btn = g('btn-run'); btn.disabled = true; btn.textContent = 'Analyzing…'; g('logbox').innerHTML = '';
+      try { localStorage.setItem('dqa', JSON.stringify({ sid: v('sid'), sname: v('sname'), fid: v('fid') })); } catch { }
+      const sid = extractSheetId(v('sid')), sname = v('sname'), fid = extractFolderId(v('fid'));
+      const customMap = {}; // name mapping removed
+      if (!sid || !fid) { alert('Enter Sheet ID and Folder ID.'); btn.disabled = false; btn.textContent = '▶  Run analysis'; return; }
+      const checks = { empty: g('chk-empty').checked, small: g('chk-small').checked, naming: g('chk-naming').checked, recent: g('chk-recent').checked };
+      try {
+        log('Reading Google Sheet…'); setPbar(8);
+        const [[combos, scriptLines], showName] = await Promise.all([
+          fetchSheet(sid, sname),
+          fetchSheetTitle(sid),
+        ]);
+        log(`${combos.length} EP×VT combinations${scriptLines.length ? ` · ${scriptLines.length} script lines with timestamps` : ''}`);
+        if (showName) {
+          g('show-name').textContent = showName;
+          log(`Show: ${showName}`);
+        }
+        STATE._scriptLines = scriptLines;
+        setPbar(28);
+        log('Scanning Drive folders…');
+        const { subs, files, subMap } = await scanDrive(fid);
+        log(`${files.length} audio files found`); setPbar(68);
+        log('Building match preview…');
+        STATE._pending = { combos, files, subs, subMap, checks, customMap, scriptLines: STATE._scriptLines || [] };
+        setPbar(90);
+        // Show match review modal before finalizing
+        showMatchModal(combos, subs, files, customMap);
+      } catch (err) { log('ERROR: ' + err.message); setStat('Error: ' + err.message); console.error(err); }
+      btn.disabled = false; btn.textContent = '▶  Run analysis';
+    }
+
+    function showMatchModal(combos, subs, files, customMap) {
+      const vtNames = [...new Set(combos.map(c => c.vt))].sort((a, b) => a.localeCompare(b));
+      const sortedSubs = [...subs].sort((a, b) => a.name.localeCompare(b.name));
+
+      // Auto-match: each folder can only be claimed by ONE VT
+      const matchMap = {};
+      const usedFolders = new Set();
+      for (const vt of vtNames) {
+        const m = sortedSubs.find(s => vtMatch(vt, s.name, customMap) && !usedFolders.has(s.name));
+        matchMap[vt] = m ? m.name : '';
+        if (m) usedFolders.add(m.name);
+      }
+
+      // Folders with audio not claimed by any VT
+      const claimedFolders = new Set(Object.values(matchMap).filter(Boolean));
+      const unmatchedFolders = sortedSubs.filter(s =>
+        !claimedFolders.has(s.name) && files.some(f => f.folder === s.name)
+      );
+
+      // Unmatched alert
+      if (unmatchedFolders.length) {
+        const items = unmatchedFolders.map(s => {
+          const n = files.filter(f => f.folder === s.name).length;
+          const url = `https://drive.google.com/drive/folders/${s.id}`;
+          return `<div class="unmatched-item">⚠ <a href="${esc(url)}" target="_blank">${esc(s.name)}</a> — ${n} file${n !== 1 ? 's' : ''}, not matched to any VT</div>`;
+        }).join('');
+        g('unmatched-folders-alert').innerHTML =
+          `<div class="unmatched-alert"><div class="unmatched-alert-title">⚠ ${unmatchedFolders.length} folder${unmatchedFolders.length > 1 ? 's' : ''} with audio not assigned to any VT</div>${items}</div>`;
+      } else {
+        g('unmatched-folders-alert').innerHTML = '';
+      }
+
+      // ── LEFT: folder chips (sorted A-Z) ──
+      const chips = sortedSubs.map(s => {
+        const hasAudio = files.some(f => f.folder === s.name);
+        const isClaimed = claimedFolders.has(s.name);
+        const cls = !hasAudio ? 'empty-f' : isClaimed ? 'claimed' : 'unclaimed';
+        const count = files.filter(f => f.folder === s.name).length;
+        const url = `https://drive.google.com/drive/folders/${s.id}`;
+        return `<div class="folder-chip ${cls}" id="chip-${esc(s.name.replace(/\W/g, '_'))}">
+      <div class="folder-chip-dot"></div>
+      <a class="folder-chip-name" href="${esc(url)}" target="_blank" style="color:inherit;text-decoration:none" title="${esc(s.name)}">${esc(s.name)}</a>
+      <span class="folder-chip-count">${hasAudio ? count + 'f' : ''}</span>
+    </div>`;
+      }).join('');
+      g('folders-panel-list').innerHTML = chips;
+
+      // ── RIGHT: VT match table (sorted A-Z, dropdown sorted A-Z) ──
+      const rows = vtNames.map(vt => {
+        const matched = matchMap[vt];
+        const opts = ['<option value="">— no folder —</option>',
+          ...sortedSubs.map(s => `<option value="${esc(s.name)}"${matched === s.name ? ' selected' : ''}>${esc(s.name)}</option>`)
+        ].join('');
+        return `<tr class="${matched ? 'row-ok' : 'row-miss'}" data-vt="${esc(vt)}">
+      <td style="font-weight:600">${esc(vt)}</td>
+      <td><select class="match-folder-sel" data-vt="${esc(vt)}" onchange="updateMatch(this)">${opts}</select></td>
+      <td><span class="match-status" style="color:${matched ? 'var(--ok)' : 'var(--danger)'}">${matched ? '✓ Matched' : '✗ No folder'}</span></td>
+    </tr>`;
+      }).join('');
+      g('match-tbody').innerHTML = rows;
+
+      STATE._matchMap = matchMap;
+      STATE._unmatchedFolders = unmatchedFolders;
+      STATE._sortedSubs = sortedSubs;
+      STATE._files = files;
+      g('match-modal').style.display = 'flex';
+    }
+
+    function updateMatch(sel) {
+      const vt = sel.dataset.vt;
+      const newFolder = sel.value;
+      const prevFolder = STATE._matchMap[vt] || '';
+
+      // If newFolder is already claimed by another VT, block it
+      if (newFolder) {
+        const alreadyClaimed = Object.entries(STATE._matchMap).some(([k, v]) => v === newFolder && k !== vt);
+        if (alreadyClaimed) {
+          alert(`"${newFolder}" is already assigned to another VT. Choose a different folder or unassign it first.`);
+          sel.value = prevFolder; // revert
+          return;
+        }
+      }
+
+      STATE._matchMap[vt] = newFolder;
+      const row = sel.closest('tr');
+      row.className = newFolder ? 'row-ok' : 'row-miss';
+      const st = row.querySelector('.match-status');
+      st.textContent = newFolder ? '✓ Matched' : '✗ No folder';
+      st.style.color = newFolder ? 'var(--ok)' : 'var(--danger)';
+
+      // Refresh folder chips
+      const claimedFolders = new Set(Object.values(STATE._matchMap).filter(Boolean));
+      const files = STATE._files || [];
+      document.querySelectorAll('.folder-chip').forEach(chip => {
+        const nameEl = chip.querySelector('.folder-chip-name');
+        if (!nameEl) return;
+        const name = nameEl.textContent;
+        const hasAudio = files.some(f => f.folder === name);
+        const isClaimed = claimedFolders.has(name);
+        chip.className = 'folder-chip ' + (!hasAudio ? 'empty-f' : isClaimed ? 'claimed' : 'unclaimed');
+      });
+    }
+
+    function closeMatchModal() {
+      g('match-modal').style.display = 'none';
+      setPbar(0);
+    }
+
+    async function confirmMatching() {
+      g('match-modal').style.display = 'none';
+      const { combos, files, subs, subMap, checks, scriptLines } = STATE._pending;
+      const matchMap = STATE._matchMap;
+      // Build a resolved customMap from user selections
+      const resolvedMap = {};
+      for (const [vt, folder] of Object.entries(matchMap)) {
+        if (folder) resolvedMap[norm(vt)] = folder;
+      }
+      try {
+        log('Running analysis with confirmed matching…'); setPbar(70);
+        // Debug: log sample files per folder
+        const folderSample = {};
+        files.forEach(f => {
+          if (!folderSample[f.folder]) folderSample[f.folder] = [];
+          if (folderSample[f.folder].length < 3) folderSample[f.folder].push(f.stem);
+        });
+        log('── File samples per folder ──');
+        Object.entries(folderSample).forEach(([folder, stems]) => {
+          log(`  ${folder}: ${stems.join(' | ')}`);
+        });
+        const vtReports = buildReportsResolved(combos, files, subs, subMap, resolvedMap);
+        // Debug: log what epMatch returned for missing files
+        vtReports.filter(r => r.missing.length > 0 && r.status !== 'notfound').forEach(r => {
+          const inF = files.filter(f => f.folder === r.folderName);
+          log(`── ${r.vt} missing eps: ${r.missing.slice(0, 5).map(ep => {
+            const raw = ep.replace(/[^0-9]/g, '');
+            const noLead = String(parseInt(raw, 10));
+            const padded = noLead.padStart(2, '0');
+            const tried = [raw, noLead, padded].flatMap(n => ['ep', 'e', 'ep_', 'e_'].map(p => p + n));
+            const sample = inF[0] ? inF[0].stem : '(no files)';
+            return ep + '→tried:[' + tried.slice(0, 4).join(',') + '] sample:' + sample.slice(0, 30);
+          }).join(' | ')}`);
+        });
+        const qa = runQA(files, checks);
+        const { completed, almost } = getCompletedEpisodes(combos, vtReports);
+        setPbar(100);
+        const totalDel = vtReports.reduce((s, r) => s + r.delivered, 0);
+        const totalMiss = vtReports.reduce((s, r) => s + r.missing.length, 0);
+        STATE = { ...STATE, combos, files, subfolders: subs, vtReports, qa, completed, almost };
+        g('m-exp').textContent = combos.length;
+        g('m-del').textContent = totalDel;
+        setM('m-mis', totalMiss, totalMiss ? 'cd' : 'co');
+        setM('m-qa', qa.length, qa.length ? 'cw' : 'co');
+        renderReport(vtReports, completed, almost);
+        renderQA(qa);
+        renderMatrix(combos, vtReports);
+        // assignedFolders = folders actually used in confirmed reports
+        const assignedFolders = new Set(vtReports.map(r => r.folderName).filter(Boolean));
+        renderUnmatched(subs, files, assignedFolders);
+        const nc = vtReports.filter(r => r.status === 'complete').length;
+        log(`✓ Done — ${nc}/${vtReports.length} VTs complete, ${completed.length} eps fully delivered`);
+        setStat(`${combos.length} expected · ${totalDel} delivered · ${totalMiss} missing · ${qa.length} QA issues · ${completed.length} completed eps`);
+        showTab('report', document.querySelector('.tab'));
+        // ── Gap analysis — runs automatically if timestamps are available ──
+        if (scriptLines && scriptLines.length) {
+          log(`Gap analysis: ${scriptLines.length} script lines loaded · ${[...new Set(scriptLines.map(l=>l.vt))].length} VTs`);
+          runGapAnalysis(vtReports, files, scriptLines).catch(err => log('Gap error: ' + err.message));
+        } else {
+          log('Gap analysis skipped — no TIMESTAMP IN/OUT columns found in sheet');
+        }
+      } catch (err) { log('ERROR: ' + err.message); console.error(err); }
+    }
+
+    // buildReports using resolved match map (folder name per VT is pre-determined)
+    function buildReportsResolved(combos, files, subs, subMap, resolvedMap) {
+      const vtNames = [...new Set(combos.map(c => c.vt))].sort();
+      const reports = [];
+      // resolvedMap already has explicit 1-to-1 assignments from user confirmation
+      // Still protect against duplicates: if same folder appears twice, second one gets empty
+      const usedFolders = new Set();
+      for (const vt of vtNames) {
+        const vtC = combos.filter(c => c.vt === vt);
+        const candidate = resolvedMap[norm(vt)] || null;
+        const folderName = (candidate && !usedFolders.has(candidate)) ? candidate : null;
+        if (folderName) usedFolders.add(folderName);
+        const folderUrl = folderName && subMap[folderName] ? subMap[folderName].url : null;
+        if (!folderName) {
+          reports.push({ vt, status: 'notfound', folderName: null, folderUrl: null, total: vtC.length, delivered: 0, missing: vtC.map(c => c.ep), deliveredList: [] });
+          continue;
+        }
+        const inF = files.filter(f => f.folder === folderName);
+        const deliveredList = [], missing = [];
+        for (const { ep } of vtC) {
+          if (inF.some(f => epMatch(f.stem, ep))) deliveredList.push(ep);
+          else missing.push(ep);
+        }
+        const pct = deliveredList.length / vtC.length;
+        const status = pct === 1 ? 'complete' : missing.length === vtC.length ? 'missing' : 'partial';
+        reports.push({ vt, status, folderName, folderUrl, total: vtC.length, delivered: deliveredList.length, missing, deliveredList });
+      }
+      const ord = { notfound: 0, missing: 1, partial: 2, complete: 3 };
+      reports.sort((a, b) => ord[a.status] - ord[b.status]);
+      return reports;
+    }
+
+    function renderUnmatched(allSubs, files, assignedFolders) {
+      const tab = g('tab-unmatched');
+      // Only show folders that: have audio AND were NOT assigned to any VT after confirmation
+      const truly = allSubs.filter(s =>
+        !assignedFolders.has(s.name) && files.some(f => f.folder === s.name)
+      );
+      if (!truly.length) { tab.style.display = 'none'; return; }
+      tab.style.display = '';
+      tab.textContent = `⚠ Unmatched (${truly.length})`;
+      const tbody = g('body-unmatched');
+      tbody.innerHTML = truly.map((s, i) => {
+        const fls = files.filter(f => f.folder === s.name);
+        const url = `https://drive.google.com/drive/folders/${s.id}`;
+        return `<tr class="${i % 2 ? 'alt' : ''}">
+      <td><a href="${esc(url)}" target="_blank" style="color:var(--acc2);font-weight:600">${esc(s.name)}</a></td>
+      <td style="color:var(--muted)">${fls.length} file${fls.length !== 1 ? 's' : ''}</td>
+      <td><span style="font-size:11px;color:var(--warn)">Not assigned to any VT</span></td>
+    </tr>`;
+      }).join('');
+    }
+
+    // ── Render report ─────────────────────────────────────────────
+    function renderReport(reports, completed, almost) {
+      const wrap = g('report-wrap');
+      if (!reports.length) { wrap.innerHTML = '<div class="empty"><span class="empty-icon">📋</span>No data</div>'; return; }
+      let html = '';
+
+      // Show name header in report
+      const showName = g('show-name').textContent;
+      if (showName) {
+        html += `<div style="font-size:13px;font-weight:700;color:var(--acc2);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+      🎬 ${esc(showName)}
+    </div>`;
+      }
+
+      // Completed episodes summary
+      if (completed.length) {
+        html += `<div class="completed-eps-bar">
+      <div class="completed-eps-title">✓ Completed episodes — all VTs delivered (${completed.length})</div>
+      <div class="completed-eps-grid">
+        ${completed.map(ep => `<span class="ep-done">${ep.replace(/[^0-9]/g, '')}</span>`).join('')}
+      </div>
+    </div>`;
+      }
+      // Almost-done episodes (missing exactly 1 VT)
+      if (almost && almost.length) {
+        html += `<div class="completed-eps-bar" style="border-color:rgba(245,166,35,.25);margin-top:8px">
+      <div class="completed-eps-title" style="color:var(--warn)">⚠ Missing 1 VT (${almost.length})</div>
+      <div class="completed-eps-grid">
+        ${almost.map(({ ep, missingVT }) => `<span class="ep-partial" title="Missing: ${esc(missingVT)}">${ep.replace(/[^0-9]/g, '')} <span style="font-size:9px;opacity:.7">-${esc(missingVT.split(' ')[0])}</span></span>`).join('')}
+      </div>
+    </div>`;
+      }
+
+      const groups = [
+        { key: 'notfound', icon: '✗', label: 'No folder in Drive', color: 'var(--danger)' },
+        { key: 'missing', icon: '⚠', label: 'No deliveries at all', color: 'var(--warn)' },
+        { key: 'partial', icon: '⚠', label: 'Incomplete delivery', color: 'var(--warn)' },
+        { key: 'complete', icon: '✓', label: 'Complete delivery', color: 'var(--ok)' },
+      ];
+      for (const { key, icon, label, color } of groups) {
+        const items = reports.filter(r => r.status === key);
+        if (!items.length) continue;
+        html += `<div class="sec-title"><span style="color:${color}">${icon}</span> ${label} <span class="sec-count">${items.length} VT${items.length > 1 ? 's' : ''}</span></div>`;
+        html += `<div class="vt-cards">${items.map(r => vtCard(r)).join('')}</div>`;
+      }
+      wrap.innerHTML = html;
+    }
+
+    function vtCard(r) {
+      const pct = r.total > 0 ? Math.round(r.delivered / r.total * 100) : 0;
+      const icons = { complete: '✓', partial: '⚠', missing: '⚠', notfound: '✗' };
+      const summary = r.status === 'notfound' ? 'Folder not found in Drive' : `Delivered ${r.delivered} of ${r.total} episodes`;
+      let body = '';
+      if (r.status === 'notfound') {
+        const epNums = r.missing.map(e => e.replace(/[^0-9]/g, '')).join(', ');
+        body = `<div class="notfound-body">
+      No folder found for <strong>${esc(r.vt)}</strong> in Drive.
+      <div class="notfound-eps">Appears in episodes: ${esc(epNums)}</div>
+    </div>`;
+      } else {
+        const allEps = [...r.missing, ...r.deliveredList].sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+        const chips = allEps.map(ep => {
+          const isMiss = r.missing.includes(ep);
+          const n = ep.replace(/[^0-9]/g, '');
+          return `<span class="ep ${isMiss ? 'ep-miss' : 'ep-ok'}">${n}</span>`;
+        }).join('');
+        const missNums = r.missing.map(e => e.replace(/[^0-9]/g, '')).join(', ');
+        const folderLink = r.folderUrl ? `<a class="folder-link" href="${esc(r.folderUrl)}" target="_blank">📁 Open folder in Drive</a>` : '';
+        body = r.missing.length
+          ? `<div class="miss-label">Episodes NOT delivered (${r.missing.length}): ${esc(missNums)}</div>
+        <div class="ep-grid">${chips}</div>
+        ${folderLink}`
+          : `<div style="color:var(--ok);font-size:12px;font-weight:600">✓ All episodes delivered</div>
+        ${folderLink}`;
+      }
+      return `<div class="vtc ${r.status}">
+    <div class="vtc-hdr" onclick="this.parentElement.classList.toggle('open')">
+      <span class="vtc-icon">${icons[r.status] || '?'}</span>
+      <span class="vtc-name">${esc(r.vt)}</span>
+      <span class="vtc-info">${esc(summary)}</span>
+      <div class="vtc-bar-wrap">
+        <div class="vtc-mini"><div class="vtc-mini-fill" style="width:${pct}%"></div></div>
+        <span class="vtc-pct">${r.delivered}/${r.total}</span>
+      </div>
+      <span class="vtc-chev">▶</span>
+    </div>
+    <div class="vtc-body">${body}</div>
+  </div>`;
+    }
+
+    // ── Render QA ─────────────────────────────────────────────────
+    function renderQA(qa) {
+      const tbody = g('body-qa');
+      if (!qa.length) { tbody.innerHTML = '<tr><td colspan="4"><div class="empty"><span class="empty-icon">✅</span>No QA issues found</div></td></tr>'; return; }
+      tbody.innerHTML = qa.map((q, i) => {
+        const pc = q.severity === 'danger' ? 'pd' : q.severity === 'info' ? 'pi' : 'pw';
+        return `<tr class="${i % 2 ? 'alt' : ''}" data-sev="${q.severity}">
+      <td><a href="${esc(q.fileUrl)}" target="_blank" style="color:var(--acc2);font-family:'Courier New',monospace;font-size:11px">${esc(q.file)}</a></td>
+      <td><a href="${esc(q.folderUrl || '#')}" target="_blank" style="color:var(--info);text-decoration:none"><span class="pill pi">${esc(q.folder)}</span></a></td>
+      <td><span class="pill ${pc}">${esc(q.type)}</span></td>
+      <td style="color:var(--muted);font-size:11px">${esc(q.detail)}</td>
+    </tr>`;
+      }).join('');
+    }
+
+    // ── Render Matrix ─────────────────────────────────────────────
+    function renderMatrix(combos, vtReports) {
+      const eps = [...new Set(combos.map(c => c.ep))].sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+      const expSet = new Set(combos.map(c => c.vt + '|' + c.ep));
+      const missSet = new Set(vtReports.flatMap(r => r.missing.map(ep => r.vt + '|' + ep)));
+      const nfSet = new Set(vtReports.filter(r => r.status === 'notfound').map(r => r.vt));
+
+      let html = '<table class="matrix-tbl" id="matrix-table"><thead><tr><th class="vth">VT</th>';
+      eps.forEach(ep => html += `<th title="${esc(ep)}">${ep.replace(/[^0-9]/g, '')}</th>`);
+      html += '</tr></thead><tbody>';
+      for (const r of vtReports) {
+        const nc = r.status === 'complete' ? 'var(--ok)' : r.status === 'notfound' ? 'var(--danger)' : 'var(--warn)';
+        const folderLink = r.folderUrl ? ` onclick="openLink('${r.folderUrl}')" title="Open folder"` : '';
+        html += `<tr data-vt="${esc(r.vt)}" data-status="${r.status}">
+      <td class="vtd" style="color:${nc}"${folderLink}>${esc(r.vt)}</td>`;
+        for (const ep of eps) {
+          const key = r.vt + '|' + ep;
+          if (!expSet.has(key)) { html += '<td class="c-na">·</td>'; continue; }
+          if (nfSet.has(r.vt)) { html += '<td class="c-q" title="No folder">?</td>'; continue; }
+          html += missSet.has(key) ? '<td class="c-miss" title="Missing">✗</td>' : '<td class="c-ok" title="Delivered">✓</td>';
+        }
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      html += `<div class="legend">
+    <span class="c-ok">✓ delivered</span>
+    <span class="c-miss">✗ missing</span>
+    <span class="c-q">? no folder</span>
+    <span class="c-na">· n/a</span>
+    <span style="color:var(--muted);margin-left:8px;font-size:10px">Click VT name to open folder</span>
+  </div>`;
+      g('matrix-wrap').innerHTML = html;
+    }
+
+    function openLink(url) { window.open(url, '_blank'); }
+
+    // ── UI helpers ────────────────────────────────────────────────
+    function showTab(name, el) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.pane').forEach(t => t.classList.remove('active'));
+      el.classList.add('active');
+      g('pane-' + name).classList.add('active');
+    }
+    function filterReport() {
+      const q = g('q-report').value.toLowerCase();
+      const st = g('f-status').value;
+      document.querySelectorAll('.vtc').forEach(c => {
+        const name = c.querySelector('.vtc-name')?.textContent.toLowerCase() || '';
+        const cs = [...c.classList].find(x => ['complete', 'partial', 'missing', 'notfound'].includes(x)) || '';
+        c.style.display = (!q || name.includes(q)) && (!st || cs === st) ? '' : 'none';
+      });
+    }
+    function filterMatrix() {
+      const q = g('q-matrix').value.toLowerCase();
+      const st = g('f-matrix-status').value;
+      document.querySelectorAll('#matrix-table tbody tr').forEach(r => {
+        const vt = (r.dataset.vt || '').toLowerCase();
+        const status = r.dataset.status || '';
+        r.style.display = (!q || vt.includes(q)) && (!st || status === st) ? '' : 'none';
+      });
+    }
+    function filterTbl(id, q) {
+      q = (q || '').toLowerCase();
+      document.querySelectorAll('#' + id + ' tbody tr').forEach(r => {
+        r.style.display = (!q || r.textContent.toLowerCase().includes(q)) ? '' : 'none';
+      });
+    }
+    function filterSev(s) {
+      document.querySelectorAll('#tbl-qa tbody tr').forEach(r => {
+        r.style.display = (!s || r.dataset.sev === s) ? '' : 'none';
+      });
+    }
+    function setM(id, val, cls) { const e = g(id); e.textContent = val; e.className = 'metric-val ' + cls; }
+
+    // ── Export ────────────────────────────────────────────────────
+    function exportReport() {
+      if (!STATE.vtReports.length) { alert('Run the analysis first.'); return; }
+      const wb = XLSX.utils.book_new();
+      const showName = g('show-name').textContent || 'Show';
+
+      // ── Sheet 1: Summary ──
+      const summaryRows = [
+        ['DELIVERY REPORT', showName, today()],
+        [],
+        ['VT', 'Status', 'Delivered', 'Total', '%', 'Missing episodes', 'Delivered episodes', 'Folder'],
+      ];
+      for (const r of STATE.vtReports) {
+        const pct = r.total > 0 ? Math.round(r.delivered / r.total * 100) : '';
+        summaryRows.push([
+          r.vt,
+          r.status === 'complete' ? 'Complete' : r.status === 'partial' ? 'Incomplete' : r.status === 'missing' ? 'No deliveries' : 'No folder',
+          r.delivered, r.total, pct,
+          r.missing.map(e => e.replace(/[^0-9]/g, '')).join(', '),
+          r.deliveredList.map(e => e.replace(/[^0-9]/g, '')).join(', '),
+          r.folderUrl || '',
+        ]);
+      }
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+      // Column widths
+      wsSummary['!cols'] = [{ wch: 25 }, { wch: 14 }, { wch: 10 }, { wch: 6 }, { wch: 5 }, { wch: 40 }, { wch: 40 }, { wch: 50 }];
+      // Style header row
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+      // ── Sheet 2: Detail (one row per VT x Episode) ──
+      const eps = [...new Set(STATE.combos.map(c => c.ep))].sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+      const detailRows = [['VT', 'Episode', 'Status']];
+      for (const r of STATE.vtReports) {
+        const vtEps = new Set(STATE.combos.filter(c => c.vt === r.vt).map(c => c.ep));
+        for (const ep of eps) {
+          if (!vtEps.has(ep)) continue;
+          const delivered = r.deliveredList.includes(ep);
+          const status = r.status === 'notfound' ? 'No folder' : delivered ? 'Delivered' : 'Missing';
+          detailRows.push([r.vt, parseInt(ep.replace(/\D/g, '')), status]);
+        }
+      }
+      const wsDetail = XLSX.utils.aoa_to_sheet(detailRows);
+      wsDetail['!cols'] = [{ wch: 25 }, { wch: 8 }, { wch: 12 }];
+      XLSX.utils.book_append_sheet(wb, wsDetail, 'Detail');
+
+      // ── Sheet 3: Completed episodes ──
+      if (STATE.completed && STATE.completed.length) {
+        const compRows = [
+          ['Completed episodes — all VTs delivered'],
+          [],
+          ['Episode'],
+          ...STATE.completed.map(e => [parseInt(e.replace(/\D/g, ''))]),
+        ];
+        const wsComp = XLSX.utils.aoa_to_sheet(compRows);
+        wsComp['!cols'] = [{ wch: 12 }];
+        XLSX.utils.book_append_sheet(wb, wsComp, 'Completed Episodes');
+      }
+
+      // ── Sheet 4: QA Issues ──
+      if (STATE.qa && STATE.qa.length) {
+        const qaRows = [['File', 'VT', 'Type', 'Severity', 'Detail'], ...STATE.qa.map(q => [q.file, q.folder, q.type, q.severity, q.detail])];
+        const wsQA = XLSX.utils.aoa_to_sheet(qaRows);
+        wsQA['!cols'] = [{ wch: 40 }, { wch: 20 }, { wch: 20 }, { wch: 10 }, { wch: 50 }];
+        XLSX.utils.book_append_sheet(wb, wsQA, 'QA Issues');
+      }
+
+      const fn = `delivery_report_${showName.replace(/[^a-z0-9]/gi, '_')}_${today()}.xlsx`;
+      XLSX.writeFile(wb, fn);
+    }
+
+    function exportCSV() {
+      if (!STATE.qa.length) { alert('No QA issues to export.'); return; }
+      // Keep QA export as CSV for quick access
+      const wb = XLSX.utils.book_new();
+      const rows = [['File', 'VT', 'Type', 'Severity', 'Detail'], ...STATE.qa.map(q => [q.file, q.folder, q.type, q.severity, q.detail])];
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{ wch: 40 }, { wch: 20 }, { wch: 20 }, { wch: 10 }, { wch: 50 }];
+      XLSX.utils.book_append_sheet(wb, ws, 'QA Issues');
+      XLSX.writeFile(wb, `qa_issues_${today()}.xlsx`);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════
+    // GAP ANALYSIS — automatic, runs after delivery check
+    // ═══════════════════════════════════════════════════════════════
+
+    let GAP = {
+      audioCtx: null,
+      results: {},   // keyed by vt → { lines: [{ep, timeIn, timeOut, char, script, rmsDb, missing, file}] }
+    };
+
+    function tsToSec(ts) {
+      const c = (ts || '').replace(',', '.');
+      const p = c.split(':');
+      if (p.length === 3) return +p[0] * 3600 + +p[1] * 60 + parseFloat(p[2]);
+      if (p.length === 2) return +p[0] * 60 + parseFloat(p[1]);
+      return parseFloat(c) || 0;
+    }
+
+    function getRMSdB(buf, t0, t1) {
+      const sr = buf.sampleRate;
+      const s0 = Math.max(0, Math.floor(t0 * sr));
+      const s1 = Math.min(buf.length, Math.ceil(t1 * sr));
+      if (s1 <= s0) return -Infinity;
+      let sq = 0, n = 0;
+      for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+        const d = buf.getChannelData(ch);
+        for (let i = s0; i < s1; i++) { sq += d[i] * d[i]; n++; }
+      }
+      const rms = Math.sqrt(sq / Math.max(n, 1));
+      return rms === 0 ? -Infinity : 20 * Math.log10(rms);
+    }
+
+    function epNumOf(s) { return parseInt((s || '').replace(/\D/g, ''), 10) || 0; }
+
+    function epFromStem(stem) {
+      const m = (stem || '').match(/(?:ep[_\-\s]?)?(\d{1,4})/i);
+      return m ? parseInt(m[1], 10) : null;
+    }
+
+    async function downloadAudioBuffer(fileId) {
+      const headers = {};
+      if (GOOG_TOKEN) headers['Authorization'] = `Bearer ${GOOG_TOKEN}`;
+      const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
+      const r = await fetch(url, { headers });
+      if (!r.ok) throw new Error(`HTTP ${r.status} downloading file ${fileId}`);
+      const ab = await r.arrayBuffer();
+      GAP.audioCtx = GAP.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      return GAP.audioCtx.decodeAudioData(ab);
+    }
+
+    async function runGapAnalysis(vtReports, driveFiles, scriptLines) {
+      const THRESHOLD = -40; // dB — silence if RMS below this
+      if (!scriptLines || !scriptLines.length) return;
+
+      // Show gap metric spinner
+      g('m-gap-wrap').style.display = '';
+      g('m-gap-val').innerHTML = '<span class="gap-spinner"></span>';
+
+      GAP.results = {};
+      const activeReports = vtReports.filter(r => r.status !== 'notfound' && r.deliveredList.length > 0);
+      if (!activeReports.length) { log('Gap: no delivered files to analyze'); return; }
+      log(`Gap: ${activeReports.length} VTs · ${activeReports.reduce((s,r)=>s+r.deliveredList.length,0)} files to scan`);
+      let totalFiles = activeReports.reduce((s, r) => s + r.deliveredList.length, 0);
+      let doneFiles = 0;
+
+      for (const report of activeReports) {
+        const vt = report.vt;
+        GAP.results[vt] = { lines: [], analyzed: 0, missing: 0 };
+        const vtLines = scriptLines.filter(l => l.vt === vt);
+        log(`Gap: VT "${vt}" — ${vtLines.length} script lines, folder "${report.folderName}", ${report.deliveredList.length} delivered eps`);
+        if (!vtLines.length) { doneFiles += report.deliveredList.length; continue; }
+
+        // Badge: analyzing
+        updateVtGapBadge(vt, 'analyzing', '⏳ analyzing…');
+
+        for (const ep of report.deliveredList) {
+          // Find Drive file object for this episode
+          const driveFile = driveFiles.find(f => f.folder === report.folderName && epFromStem(f.stem) === epNumOf(ep));
+          if (!driveFile) { log(`Gap: no audio file found for ${vt} / ${ep} in folder "${report.folderName}"`); doneFiles++; continue; }
+
+          try {
+            log(`Gap: downloading ${driveFile.name}…`);
+            const audioBuf = await downloadAudioBuffer(driveFile.id);
+            const epLines = vtLines.filter(l => epNumOf(l.episode) === epNumOf(ep));
+
+            for (let i = 0; i < epLines.length; i++) {
+              if (i % 30 === 0) await new Promise(r => setTimeout(r, 0));
+              const line = epLines[i];
+              const t0 = tsToSec(line.timeIn), t1 = tsToSec(line.timeOut);
+              if (t1 <= t0 || t0 > audioBuf.duration) continue;
+              const rmsDb = getRMSdB(audioBuf, t0, t1);
+              const missing = rmsDb < THRESHOLD;
+              GAP.results[vt].lines.push({ ep, timeIn: line.timeIn, timeOut: line.timeOut, character: line.character, script: line.script, rmsDb, missing, file: driveFile.name });
+              if (missing) GAP.results[vt].missing++;
+              GAP.results[vt].analyzed++;
+            }
+          } catch (err) {
+            log(`Gap: error on ${driveFile.name}: ${err.message}`);
+          }
+
+          doneFiles++;
+          const pct = Math.round(doneFiles / totalFiles * 100);
+          g('gap-prog-main').style.width = pct + '%';
+          setStat(`Gap analysis: ${pct}% (${doneFiles}/${totalFiles} files)…`);
+
+          // Update badge live
+          const r = GAP.results[vt];
+          if (r.missing > 0) updateVtGapBadge(vt, 'warn', `⚠ ${r.missing} missing lines`);
+          else updateVtGapBadge(vt, 'analyzing', '⏳ analyzing…');
+
+          // Re-render vtCard body with partial results
+          refreshVtCard(vt);
+        }
+
+        // Final badge for this VT
+        const r = GAP.results[vt];
+        if (!r.analyzed) updateVtGapBadge(vt, 'err', '? no data');
+        else if (r.missing === 0) updateVtGapBadge(vt, 'ok', '✓ all lines OK');
+        else updateVtGapBadge(vt, 'warn', `⚠ ${r.missing} missing`);
+        refreshVtCard(vt);
+      }
+
+      // Final summary metric
+      const totalMissing = Object.values(GAP.results).reduce((s, r) => s + r.missing, 0);
+      const totalAnalyzed = Object.values(GAP.results).reduce((s, r) => s + r.analyzed, 0);
+      if (totalMissing === 0) {
+        g('m-gap-val').innerHTML = `<span style="color:var(--ok)">✓ ${totalAnalyzed} OK</span>`;
+      } else {
+        g('m-gap-val').innerHTML = `<span style="color:var(--warn)">⚠ ${totalMissing} missing</span>`;
+      }
+      g('gap-prog-main').style.width = '100%';
+      log(`Gap analysis complete — ${totalMissing} missing lines out of ${totalAnalyzed} analyzed`);
+      setStat(`Delivery check complete · Gap analysis: ${totalMissing} missing lines`);
+    }
+
+    function updateVtGapBadge(vt, cls, text) {
+      // Find badge element inside vtCard for this VT
+      const card = findVtCard(vt);
+      if (!card) return;
+      let badge = card.querySelector('.gap-badge');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'gap-badge';
+        const nameEl = card.querySelector('.vtc-name');
+        if (nameEl) nameEl.after(badge);
+      }
+      badge.className = `gap-badge ${cls}`;
+      badge.innerHTML = text;
+    }
+
+    function findVtCard(vt) {
+      // vtCards are rendered as .vtc divs; header has .vtc-name with text = vt
+      return [...document.querySelectorAll('.vtc')].find(el => {
+        const n = el.querySelector('.vtc-name');
+        return n && n.textContent.trim() === vt;
+      }) || null;
+    }
+
+    function refreshVtCard(vt) {
+      const card = findVtCard(vt);
+      if (!card) return;
+      const body = card.querySelector('.vtc-body');
+      if (!body) return;
+      // Remove old gap section if present
+      const old = body.querySelector('.gap-lines-section');
+      if (old) old.remove();
+      const r = GAP.results[vt];
+      if (!r || !r.lines.length) return;
+      const missingLines = r.lines.filter(l => l.missing);
+      if (!missingLines.length) {
+        const sec = document.createElement('div');
+        sec.className = 'gap-lines-section';
+        sec.innerHTML = `<div class="gap-ok-msg">🎙 Gap analysis: all ${r.analyzed} lines recorded ✓</div>`;
+        body.appendChild(sec);
+        return;
+      }
+      // Group by episode
+      const eps = [...new Set(missingLines.map(l => l.ep))].sort((a,b) => epNumOf(a) - epNumOf(b));
+      let html = `<div class="gap-lines-section"><div class="gap-lines-title">🎙 Missing lines (${missingLines.length})</div>`;
+      for (const ep of eps) {
+        const epLines = missingLines.filter(l => l.ep === ep);
+        html += `<div class="gap-ep-block"><div class="gap-ep-lbl">${esc(ep)} — ${epLines.length} line${epLines.length !== 1 ? 's' : ''}</div>`;
+        epLines.forEach(l => {
+          const rmsStr = isFinite(l.rmsDb) ? l.rmsDb.toFixed(1) + 'dB' : '−∞';
+          html += `<div class="gap-line-row">
+            <span class="gap-line-ts">${esc(l.timeIn)}</span>
+            <span class="gap-line-char">${esc(l.character)}</span>
+            <span class="gap-line-txt">${esc((l.script || '').slice(0, 90))}${(l.script||'').length > 90 ? '…' : ''}</span>
+            <span class="gap-line-rms">[${rmsStr}]</span>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+      html += `</div>`;
+      const sec = document.createElement('div');
+      sec.innerHTML = html;
+      body.appendChild(sec.firstChild);
+    }
+
+    // VT ASSIGNMENT MODULE
+    // ═══════════════════════════════════════════════════════════════
+
+    let VA_STATE = { chars: [], srtFiles: [], vtList: [], fullScript: [], vtMap: {} };
+    let GOOG_TOKEN = null; // OAuth access token
+
+    const GOOG_CLIENT_ID = '226966145270-koiggjolfq4hvhsgq79qsn6hn4ceitjm.apps.googleusercontent.com';
+
+    function googleSignIn() {
+      const client = google.accounts.oauth2.initTokenClient({
+        client_id: GOOG_CLIENT_ID,
+        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        callback: (resp) => {
+          if (resp.error) { console.error('Google sign-in error:', resp.error); return; }
+          GOOG_TOKEN = resp.access_token;
+          g('google-btn-text').textContent = 'Connected ✓';
+          g('btn-google-login').classList.add('connected');
+          g('btn-google-login').title = 'Google Drive access granted — all Drive reads will use your account';
+        },
+      });
+      client.requestAccessToken();
+    }
+
+    function switchModule(mod) {
+      ['assignment', 'delivery'].forEach(m => {
+        const el = document.getElementById('module-' + m);
+        if (el) el.style.display = 'none';
+        const btn = document.getElementById('mod-' + m);
+        if (btn) btn.classList.remove('active');
+      });
+      const el = document.getElementById('module-' + mod);
+      if (el) el.style.display = 'grid';
+      const btn = document.getElementById('mod-' + mod);
+      if (btn) btn.classList.add('active');
+    }
+
+    function vaLog(m) { const e = g('va-logbox'); e.innerHTML += `<p>› ${m}</p>`; e.scrollTop = e.scrollHeight; }
+    function vaSetPbar(p) { g('va-pbar').style.width = p + '%'; }
+    function vaSetStat(m) { g('va-statusbar').textContent = m; }
+    function vaShowTab(name, el) {
+      document.querySelectorAll('.va-pane').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.va-tabs .tab').forEach(t => t.classList.remove('active'));
+      g('va-pane-' + name).classList.add('active');
+      el.classList.add('active');
+    }
+
+    // Parse character name from SRT line: "ISABEL -F" → "ISABEL", "F"
+    function parseCharLine(line) {
+      const s = line.trim();
+
+      // Try all variants of gender marker at end of line:
+      // "ISABEL -F"   → with space-dash-space
+      // "ISABEL-F"    → dash no space
+      // "ISABEL -FO"  → with "O" suffix (off-screen)
+      // "ISABEL F"    → space only, no dash
+      // "ISABELF"     → glued, no separator at all
+      // "MATEO - MK"  → multi-letter code (Male Kid, etc.)
+      // Gender codes: F, M, FO, MO (female/male, on/off-screen), MK, FK (kid variants)
+      const GENDER_RE = /^(.+?)\s*[-–]?\s*(F[OK]?|M[OK]?)\s*$/i;
+      const m = s.match(GENDER_RE);
+      if (m) {
+        const possibleChar = m[1].trim();
+        const possibleGender = m[2].toUpperCase();
+        // Sanity check: char name must be at least 2 chars and gender must be valid
+        // Also ensure the gender isn't just part of the name (e.g. "MAFALDA" ends in A not gender)
+        const validGender = ['F', 'M', 'FO', 'MO', 'MK', 'FK'].includes(possibleGender);
+        if (validGender && possibleChar.length >= 2) {
+          return { char: possibleChar.toUpperCase(), gender: possibleGender };
+        }
+      }
+
+      // Last resort: check if line ends with a standalone gender letter
+      // e.g. "ISABELF" → char=ISABEL, gender=F
+      const glued = s.match(/^(.{2,})([FM]O?)$/i);
+      if (glued) {
+        const gc = glued[1].trim().toUpperCase();
+        const gg = glued[2].toUpperCase();
+        // Only accept if last chars before gender aren't already a letter that forms a word
+        // i.e. char name should end with a space or non-letter before the gender code
+        const lastChar = gc[gc.length - 1];
+        if (!/[A-ZÁÉÍÓÚÃÕÂÊÎÔÛÇÀÜ]/i.test(lastChar)) {
+          return { char: gc, gender: gg };
+        }
+      }
+
+      return { char: s.toUpperCase(), gender: '' };
+    }
+
+    // Parse full SRT text into lines array
+    function parseSRT(text, epName) {
+      const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+      const blocks = normalized.split(/\n{2,}/);
+      const lines = [];
+      for (const block of blocks) {
+        const parts = block.trim().split('\n');
+        if (parts.length < 3) continue;
+        let tsIdx = parts.findIndex(p => p.includes('-->'));
+        if (tsIdx < 0) continue;
+        const tsMatch = parts[tsIdx].match(/^([\d:,]+)\s*-->\s*([\d:,]+)/);
+        if (!tsMatch) continue;
+        const tsIn = tsMatch[1].trim(), tsOut = tsMatch[2].trim();
+        if (tsIdx + 1 >= parts.length) continue;
+        const { char: charName, gender } = parseCharLine(parts[tsIdx + 1]);
+        const dialogue = parts.slice(tsIdx + 2).join(' / ').trim();
+        if (!charName) continue;
+        lines.push({ ep: epName, tsIn, tsOut, char: charName, gender, dialogue });
+      }
+      return lines;
+    }
+
+    // Extract episode name from SRT filename
+    function epFromFilename(name) {
+      const m = name.match(/[_\-\s](EP?\d+)[_\-\s.]/i) || name.match(/(EP?\d+)/i);
+      if (!m) return null;
+      const num = m[1].replace(/[^0-9]/g, '');
+      return 'EP' + num.padStart(2, '0');
+    }
+
+    // Extract show name and language from SRT filename
+    // e.g. "EP15_Fated_To_My_Billionaire_Call_Boy_ADP_PTBR.srt" → {show:"Fated To My Billionaire Call Boy", lang:"PTBR"}
+    function showInfoFromFilename(name) {
+      const stem = name.replace(/\.srt$/i, '');
+      // Remove leading EPxx_ or Exx_
+      const noEp = stem.replace(/^EP?\d+[_\-\s]*/i, '');
+      // Language is typically last 2-4 uppercase chars before end, after underscore
+      const langMatch = noEp.match(/[_\-]([A-Z]{2,4})$/);
+      const lang = langMatch ? langMatch[1] : '';
+      // Show name: remove language suffix and any trailing code like _ADP
+      let show = langMatch ? noEp.slice(0, noEp.lastIndexOf(langMatch[0])) : noEp;
+      // Also remove trailing production codes (all-caps 2-4 chars)
+      show = show.replace(/[_\-][A-Z]{2,4}$/, '');
+      // Convert underscores to spaces and clean up
+      show = show.replace(/[_\-]+/g, ' ').trim();
+      return { show, lang };
+    }
+
+    // Switch between Drive and Local mode
+    function vaSetMode(mode) {
+      g('va-mode-drive').style.display = mode === 'drive' ? '' : 'none';
+      g('va-mode-local').style.display = mode === 'local' ? '' : 'none';
+      g('va-mode-a').classList.toggle('active', mode === 'drive');
+      g('va-mode-b').classList.toggle('active', mode === 'local');
+      VA_STATE.inputMode = mode;
+    }
+
+    // Handle Excel sheet file upload
+    function vaSheetFileSelected(input) {
+      const f = input.files[0];
+      if (!f) return;
+      VA_STATE.localSheetFile = f;
+      g('va-sheet-text').textContent = f.name + ' ✓';
+      g('va-sheet-label').style.borderColor = 'var(--ok)';
+      g('va-sheet-label').style.color = 'var(--ok)';
+    }
+
+    // Handle SRT / ZIP file selection
+    async function vaFilesSelected(input) {
+      const files = [...input.files];
+      if (!files.length) return;
+      VA_STATE.localSRTs = [];
+
+      for (const f of files) {
+        if (/\.zip$/i.test(f.name)) {
+          // Extract SRTs from ZIP
+          try {
+            const buf = await f.arrayBuffer();
+            const zip = await JSZip.loadAsync(buf);
+            const srtFiles = Object.keys(zip.files).filter(n => /\.srt$/i.test(n) && !zip.files[n].dir);
+            for (const name of srtFiles) {
+              const text = await zip.files[name].async('string');
+              const baseName = name.split('/').pop();
+              VA_STATE.localSRTs.push({ name: baseName, text });
+            }
+          } catch (e) { console.error('ZIP error:', e); }
+        } else {
+          // Plain SRT file
+          const text = await f.text();
+          VA_STATE.localSRTs.push({ name: f.name, text });
+        }
+      }
+
+      VA_STATE.localSRTs.sort((a, b) => {
+        const ea = parseInt((epFromFilename(a.name) || 'EP0').replace(/\D/g, '')),
+          eb = parseInt((epFromFilename(b.name) || 'EP0').replace(/\D/g, ''));
+        return ea - eb;
+      });
+
+      const total = VA_STATE.localSRTs.length;
+      g('va-upload-text').textContent = `${total} SRT file${total > 1 ? 's' : ''} ready ✓`;
+      g('va-upload-label').style.borderColor = 'var(--ok)';
+      g('va-upload-label').style.color = 'var(--ok)';
+    }
+
+    async function vaRun() {
+      const btn = g('va-btn-run'); btn.disabled = true; btn.textContent = 'Loading…';
+      g('va-logbox').innerHTML = '';
+      const mode = VA_STATE.inputMode || 'drive';
+      const localFiles = VA_STATE.localSRTs || [];
+      const localSheet = VA_STATE.localSheetFile || null;
+
+      if (mode === 'drive') {
+        const sid = extractSheetId(v('va-sid'));
+        if (!sid) { alert('Enter the Characters Sheet ID.'); btn.disabled = false; btn.textContent = '▶  Generate Full Script'; return; }
+        if (!extractFolderId(v('va-fid'))) { alert('Enter the SRT folder link.'); btn.disabled = false; btn.textContent = '▶  Generate Full Script'; return; }
+      } else {
+        if (!localSheet) { alert('Select the Characters Excel file.'); btn.disabled = false; btn.textContent = '▶  Generate Full Script'; return; }
+        if (!localFiles.length) { alert('Select SRT files or a ZIP.'); btn.disabled = false; btn.textContent = '▶  Generate Full Script'; return; }
+      }
+
+      const sid = mode === 'drive' ? extractSheetId(v('va-sid')) : null;
+      const sname = mode === 'drive' ? (v('va-sname') || 'Characters') : (v('va-sname-local') || 'Characters');
+      const fid = mode === 'drive' ? extractFolderId(v('va-fid')) : null;
+
+      try {
+        vaLog('Reading Characters sheet…'); vaSetPbar(10);
+        let chars, srtFiles = [];
+        if (mode === 'drive') {
+          [chars, srtFiles] = await Promise.all([vaFetchChars(sid, sname), vaScanSRTs(fid)]);
+          vaLog(`${chars.length} characters · ${srtFiles.length} SRT files in Drive`);
+        } else {
+          chars = await vaFetchCharsLocal(localSheet, sname);
+          vaLog(`${chars.length} characters · ${localFiles.length} local SRT files`);
+        }
+        VA_STATE.chars = chars;
+        VA_STATE.srtFiles = srtFiles;
+        vaSetPbar(25);
+
+        // 2. Get SRT content — from Drive or from local files
+        const allLines = [];
+        if (fid && srtFiles.length) {
+          vaLog(`Downloading ${srtFiles.length} SRT files in parallel…`);
+          const batchSize = 5;
+          for (let i = 0; i < srtFiles.length; i += batchSize) {
+            const batch = srtFiles.slice(i, i + batchSize);
+            const results = await Promise.all(batch.map(async f => {
+              const ep = epFromFilename(f.name) || 'EP01';
+              if (!epFromFilename(f.name)) vaLog(`  ℹ No ep number in "${f.name}" — defaulting to EP01`);
+              try { return parseSRT(await vaFetchSRT(f.id), ep); }
+              catch (e) { vaLog(`  ⚠ Failed: ${f.name} — ${e.message}`); return []; }
+            }));
+            results.forEach(lines => allLines.push(...lines));
+            vaSetPbar(25 + Math.round((i / srtFiles.length) * 55));
+            vaLog(`  ${Math.min(i + batchSize, srtFiles.length)}/${srtFiles.length} done`);
+          }
+        } else if (localFiles.length) {
+          vaLog(`Parsing ${localFiles.length} local SRT files…`);
+          for (let i = 0; i < localFiles.length; i++) {
+            const f = localFiles[i];
+            const ep = epFromFilename(f.name) || 'EP01';
+            if (!epFromFilename(f.name)) vaLog(`  ℹ No ep number in "${f.name}" — defaulting to EP01`);
+            const lines = parseSRT(f.text, ep);
+            allLines.push(...lines);
+            vaSetPbar(25 + Math.round((i / localFiles.length) * 55));
+          }
+          vaLog(`  ${localFiles.length} files parsed`);
+        }
+
+        // Sort by episode
+        allLines.sort((a, b) => parseInt(a.ep.replace(/\D/g, '')) - parseInt(b.ep.replace(/\D/g, '')));
+        VA_STATE.fullScript = allLines;
+
+        // Extract show name + language from first SRT filename
+        const firstFile = (srtFiles.length ? srtFiles[0] : null) || (localFiles.length ? localFiles[0] : null);
+        if (firstFile) {
+          const { show, lang } = showInfoFromFilename(firstFile.name);
+          VA_STATE.showName = show;
+          VA_STATE.lang = lang;
+          if (show) g('show-name').textContent = show + (lang ? ' — ' + lang : '');
+        }
+
+        // 3. Build vtMap — normalize char names for matching
+        const vtSet = new Set(chars.map(c => c.vt).filter(Boolean));
+        VA_STATE.vtList = [...vtSet].sort();
+        VA_STATE.vtMap = {};
+        chars.forEach(c => { if (c.vt) VA_STATE.vtMap[c.char.toUpperCase().trim()] = c.vt; });
+
+        // Find chars in SRT not in sheet → add them with vt=null so they appear in table
+        const sheetChars = new Set(chars.map(c => c.char.toUpperCase().trim()));
+        // Resolve SRT char key against sheet: if "NAME - CODE" doesn't match, try bare "NAME"
+        const resolveCharKey = (raw) => {
+          if (sheetChars.has(raw)) return raw;
+          const base = raw.replace(/\s*[-–]\s*[A-Z0-9]{1,4}$/i, '').trim();
+          return sheetChars.has(base) ? base : raw;
+        };
+        const srtCharMap = new Map(); // key -> {lines, gender, eps: Set}
+        allLines.forEach(l => {
+          const key = resolveCharKey(l.char.toUpperCase().trim());
+          if (!srtCharMap.has(key)) srtCharMap.set(key, { lines: 0, gender: l.gender, eps: new Set() });
+          const info = srtCharMap.get(key);
+          info.lines++;
+          // Normalize ep format to match sheet style: EP69 → E69
+          info.eps.add(l.ep.replace(/^EP/i, 'E'));
+        });
+
+        // Merge SRT data into sheet chars that matched (sum lines, union episodes)
+        const charByKey = new Map(chars.map(c => [c.char.toUpperCase().trim(), c]));
+        srtCharMap.forEach((info, key) => {
+          const sheetChar = charByKey.get(key);
+          if (sheetChar) {
+            sheetChar.lines += info.lines;
+            const existingEps = (sheetChar.episodes || '').split(',').map(e => e.trim()).filter(Boolean);
+            const merged = new Set([...existingEps, ...info.eps]);
+            sheetChar.episodes = [...merged]
+              .sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')))
+              .join(', ');
+          }
+        });
+
+        // Add SRT-only chars to chars array (not in sheet)
+        srtCharMap.forEach((info, charKey) => {
+          if (!sheetChars.has(charKey)) {
+            const epsSorted = [...info.eps].sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+            chars.push({ char: charKey, gender: info.gender, vt: null, lines: info.lines, episodes: epsSorted.join(', '), srtOnly: true });
+          }
+        });
+        VA_STATE.unmatchedChars = new Map([...srtCharMap.entries()].filter(([k]) => !sheetChars.has(k)));
+
+        vaSetPbar(90);
+        vaRenderChars(chars);
+        vaRenderSummary();
+        const eps = new Set(allLines.map(l => l.ep)).size;
+        g('va-m-eps').textContent = eps;
+        g('va-m-lines').textContent = allLines.length;
+        g('va-m-chars').textContent = chars.length;
+        vaSetPbar(100);
+        const srtOnly = VA_STATE.unmatchedChars ? VA_STATE.unmatchedChars.size : 0;
+        vaSetStat(`${allLines.length} lines · ${eps} episodes · ${chars.length} characters · ${VA_STATE.vtList.length} VTs${srtOnly ? ' · ' + srtOnly + ' SRT-only chars' : ''}`);
+        vaLog('✓ Done — click ↓ Excel to download');
+      } catch (err) { vaLog('ERROR: ' + err.message); console.error(err); }
+      btn.disabled = false; btn.textContent = '▶  Generate Full Script';
+    }
+
+    // Read Characters from local Excel file using SheetJS
+    async function vaFetchCharsLocal(file, sname) {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      // Find the right sheet
+      const sheetName = wb.SheetNames.find(n => n.trim().toLowerCase() === sname.trim().toLowerCase())
+        || wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      if (!rows.length) throw new Error('Sheet appears empty.');
+      const hdrs = rows[0].map(h => (h || '').toString().trim().toUpperCase());
+      const ci = hdrs.findIndex(h => h === 'CHARACTER'), gi = hdrs.findIndex(h => h === 'GENDER');
+      const vi = hdrs.findIndex(h => h === 'VT'), li = hdrs.findIndex(h => h.includes('LINE'));
+      const ei = hdrs.findIndex(h => h.includes('EPISODE'));
+      if (ci < 0) throw new Error(`CHARACTER column not found. Columns: ${rows[0].join(', ')}`);
+      return rows.slice(1).filter(r => (r[ci] || '').toString().trim()).map(r => ({
+        char: (r[ci] || '').toString().trim().toUpperCase(),
+        gender: (r[gi] || '').toString().trim(),
+        vt: (r[vi] || '').toString().trim() || null,
+        lines: li >= 0 ? parseInt(r[li]) || 0 : 0,
+        episodes: ei >= 0 ? (r[ei] || '').toString().trim() : '',
+      }));
+    }
+
+    async function vaFetchChars(sid, sname) {
+      const encName = encodeURIComponent(sname);
+      const urls = [
+        `https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&sheet=${encName}&range=A:Z&headers=1`,
+        `https://docs.google.com/spreadsheets/d/${sid}/export?format=csv&sheet=${encName}`,
+      ];
+      let text = null;
+      for (const url of urls) {
+        try {
+          const r = await fetch(url); if (!r.ok) continue;
+          const t = await r.text();
+          if (t.trim().startsWith('<')) continue;
+          text = t; break;
+        } catch { }
+      }
+      if (!text) throw new Error('Could not read Characters sheet.');
+      const rows = parseCSV(text);
+      if (!rows.length) throw new Error('Characters sheet is empty.');
+      const hdrs = rows[0].map(h => (h || '').trim().toUpperCase());
+      const ci = hdrs.findIndex(h => h === 'CHARACTER'), gi = hdrs.findIndex(h => h === 'GENDER');
+      const vi = hdrs.findIndex(h => h === 'VT'), li = hdrs.findIndex(h => h.includes('LINE'));
+      const ei = hdrs.findIndex(h => h.includes('EPISODE'));
+      if (ci < 0) throw new Error('CHARACTER column not found.');
+      return rows.slice(1).filter(r => (r[ci] || '').trim()).map(r => ({
+        char: (r[ci] || '').trim().toUpperCase(),
+        gender: (r[gi] || '').trim(),
+        vt: (r[vi] || '').trim() || null,
+        lines: li >= 0 ? parseInt(r[li]) || 0 : 0,
+        episodes: ei >= 0 ? (r[ei] || '').trim() : '',
+      }));
+    }
+
+    async function vaScanSRTs(folderId) {
+      // If we have OAuth token, use it for better access
+      const files = []; let pt = '';
+      do {
+        let d;
+        if (GOOG_TOKEN) {
+          const p = new URLSearchParams({ q: `'${folderId}' in parents and trashed=false`, fields: 'nextPageToken,files(id,name,mimeType)', pageSize: '200', supportsAllDrives: 'true', includeItemsFromAllDrives: 'true' });
+          if (pt) p.set('pageToken', pt);
+          const r = await fetch(`https://www.googleapis.com/drive/v3/files?${p}`, { headers: { Authorization: `Bearer ${GOOG_TOKEN}` } });
+          if (!r.ok) throw new Error(`Drive scan failed: ${r.status}`);
+          d = await r.json();
+        } else {
+          d = await driveQ(`'${folderId}' in parents and trashed=false`, 'nextPageToken,files(id,name,mimeType)', pt);
+        }
+        for (const f of (d.files || [])) { if (/\.srt$/i.test(f.name)) files.push(f); }
+        pt = d.nextPageToken || '';
+      } while (pt);
+      return files.sort((a, b) => {
+        const ea = parseInt((epFromFilename(a.name) || 'EP0').replace(/\D/g, '')),
+          eb = parseInt((epFromFilename(b.name) || 'EP0').replace(/\D/g, ''));
+        return ea - eb;
+      });
+    }
+
+    async function vaFetchSRT(fileId) {
+      // Use OAuth token if available, fall back to API key
+      const headers = {};
+      let url;
+      if (GOOG_TOKEN) {
+        url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`;
+        headers['Authorization'] = `Bearer ${GOOG_TOKEN}`;
+      } else {
+        url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}&supportsAllDrives=true`;
+      }
+      const r = await fetch(url, { headers });
+      if (!r.ok) throw new Error(`HTTP ${r.status} — ${GOOG_TOKEN ? '' : 'Try signing in with Google'}`);
+      return r.text();
+    }
+
+    function vaRenderChars(chars) {
+      const vtList = VA_STATE.vtList;
+      const sortedChars = [...chars].sort((a, b) => a.char.localeCompare(b.char));
+      g('va-char-tbody').innerHTML = sortedChars.map((c, i) => {
+        // N/A = intentionally unassigned; empty = not yet decided
+        const isNA = c.vt === 'N/A';
+        const opts = [
+          `<option value="N/A"${(!c.vt || isNA) ? ' selected' : ''}>N/A</option>`,
+          ...vtList.map(vt => `<option value="${esc(vt)}"${c.vt === vt ? ' selected' : ''}>${esc(vt)}</option>`)
+        ].join('');
+        const statusColor = !c.vt || isNA ? 'var(--muted2)' : 'var(--ok)';
+        const statusIcon = !c.vt || isNA ? '–' : '✓';
+        const fromSRT = c.srtOnly === true;
+        return `<tr class="${i % 2 ? 'alt' : ''}" data-char="${esc(c.char)}" style="${fromSRT ? 'opacity:.75' : ''}">
+      <td style="font-weight:600">${esc(c.char)}${fromSRT ? ` <span style="font-size:9px;color:var(--warn);font-weight:400">SRT only</span>` : ''}
+      </td>
+      <td style="color:var(--muted)">${esc(c.gender)}</td>
+      <td style="text-align:center;font-weight:600">${c.lines}</td>
+      <td style="font-size:11px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(c.episodes)}">${esc(c.episodes)}</td>
+      <td>
+        <select class="vt-sel" data-char="${esc(c.char)}" onchange="vaUpdateVT(this)">${opts}</select>
+        <span style="color:${statusColor};margin-left:6px">${statusIcon}</span>
+      </td>
+    </tr>`;
+      }).join('');
+    }
+
+    function vaUpdateVT(sel) {
+      const char = sel.dataset.char || sel.dataset.vt;
+      const vt = sel.value; // 'N/A' or actual VT name
+      const isNA = vt === 'N/A';
+      // Store in vtMap: N/A means explicitly unassigned (export as empty), real VT = assigned
+      if (isNA || !vt) delete VA_STATE.vtMap[char.toUpperCase().trim()];
+      else VA_STATE.vtMap[char.toUpperCase().trim()] = vt;
+      const c = VA_STATE.chars.find(x => x.char === char);
+      if (c) c.vt = vt || null;
+      const span = sel.nextElementSibling;
+      if (span) {
+        span.textContent = (!vt || isNA) ? '–' : '✓';
+        span.style.color = (!vt || isNA) ? 'var(--muted2)' : 'var(--ok)';
+      }
+      vaRenderSummary();
+    }
+
+    function vaRenderSummary() {
+      const vtMap = VA_STATE.vtMap, lines = VA_STATE.fullScript;
+      const vtStats = {};
+      for (const l of lines) {
+        const raw = l.char.toUpperCase().trim();
+        const vt = vtMap[raw] || vtMap[raw.replace(/\s*[-–]\s*[A-Z0-9]{1,4}$/i, '').trim()] || null;
+        if (!vt) continue;
+        if (!vtStats[vt]) vtStats[vt] = { lines: 0, chars: new Set(), eps: new Set() };
+        vtStats[vt].lines++; vtStats[vt].chars.add(l.char); vtStats[vt].eps.add(l.ep);
+      }
+      const sorted = Object.entries(vtStats).sort((a, b) => b[1].lines - a[1].lines);
+      g('va-summary-tbody').innerHTML = sorted.length
+        ? sorted.map(([vt, s], i) => `<tr class="${i % 2 ? 'alt' : ''}">
+        <td style="font-weight:600;color:var(--acc2)">${esc(vt)}</td>
+        <td style="text-align:center;font-weight:700;color:var(--ok)">${s.lines}</td>
+        <td style="font-size:11px;color:var(--muted)">${[...s.chars].join(', ')}</td>
+        <td style="font-size:11px;color:var(--muted)">${[...s.eps].sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, ''))).join(', ')}</td>
+      </tr>`).join('')
+        : '<tr><td colspan="4"><div class="empty"><span class="empty-icon">📊</span>No VTs assigned</div></td></tr>';
+    }
+
+    function vaWordWeight(text) {
+      const words = (text || '').toString().trim().split(/\s+/).filter(Boolean).length;
+      return Math.max(1, Math.ceil(words / 35));
+    }
+
+    function vaCtrlSetMode(mode) {
+      g('va-ctrl-local').style.display = mode === 'local' ? '' : 'none';
+      g('va-ctrl-drive').style.display = mode === 'drive' ? '' : 'none';
+      g('va-ctrl-mode-local').classList.toggle('active', mode === 'local');
+      g('va-ctrl-mode-drive').classList.toggle('active', mode === 'drive');
+      g('va-ctrl-export').style.display = 'none';
+      VA_STATE._ctrlMode = mode;
+    }
+
+    function vaCtrlFileSelected(input) {
+      const f = input.files[0];
+      if (!f) return;
+      g('va-ctrl-text').textContent = f.name;
+      g('va-ctrl-export').style.display = 'none';
+    }
+
+    function extractDriveFileId(input) {
+      const s = input.trim();
+      const mFile = s.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (mFile) return { id: mFile[1], type: 'file' };
+      const mSheet = s.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+      if (mSheet) return { id: mSheet[1], type: 'sheet' };
+      const mOpen = s.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (mOpen) return { id: mOpen[1], type: 'file' };
+      // bare ID: no slashes → ambiguous, try sheet first
+      if (/^[a-zA-Z0-9_-]+$/.test(s)) return { id: s, type: 'unknown' };
+      return null;
+    }
+
+    async function vaCtrlFetchDriveRows(input) {
+      const parsed = extractDriveFileId(input);
+      if (!parsed) throw new Error('Could not extract an ID from that link. Please check the URL and try again.');
+      const { id, type } = parsed;
+
+      // Try as Google Sheet first (works without sign-in if shared)
+      if (type === 'sheet' || type === 'unknown') {
+        const encName = encodeURIComponent('Full Script');
+        const urls = [
+          `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encName}&range=A:Z&headers=1`,
+          `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&sheet=${encName}`,
+        ];
+        for (const url of urls) {
+          try {
+            const r = await fetch(url);
+            if (!r.ok) continue;
+            const t = await r.text();
+            if (t.trim().startsWith('<')) continue;
+            const rows = parseCSV(t);
+            if (rows.length) return { rows, source: 'Google Sheets' };
+          } catch { /* try next */ }
+        }
+        if (type === 'sheet') throw new Error('Could not read the spreadsheet. Make sure it is shared and has a tab named "Full Script".');
+      }
+
+      // Try as Drive binary file (xlsx)
+      const headers = {};
+      let url;
+      if (GOOG_TOKEN) {
+        url = `https://www.googleapis.com/drive/v3/files/${id}?alt=media&supportsAllDrives=true`;
+        headers['Authorization'] = `Bearer ${GOOG_TOKEN}`;
+      } else {
+        url = `https://www.googleapis.com/drive/v3/files/${id}?alt=media&key=${API_KEY}&supportsAllDrives=true`;
+      }
+      const r = await fetch(url, { headers });
+      if (!r.ok) {
+        if (!GOOG_TOKEN) throw new Error(`Could not download the file (HTTP ${r.status}). If it is private, sign in with Google first.`);
+        throw new Error(`Could not download the file (HTTP ${r.status}).`);
+      }
+      const buf = await r.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheetName = wb.SheetNames.find(n => n.trim().toLowerCase() === 'full script') || wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      return { rows, source: 'Drive .xlsx' };
+    }
+
+    async function vaControlLines() {
+      const mode = VA_STATE._ctrlMode || 'local';
+      const btn = g('va-ctrl-btn');
+      btn.disabled = true; btn.textContent = 'Processing…';
+      try {
+        let rows, sourceName;
+
+        if (mode === 'local') {
+          const file = g('va-ctrl-file').files[0];
+          if (!file) throw new Error('Please select an Excel file first.');
+          const buf = await file.arrayBuffer();
+          const wb = XLSX.read(buf, { type: 'array' });
+          const sheetName = wb.SheetNames.find(n => n.trim().toLowerCase() === 'full script') || wb.SheetNames[0];
+          const ws = wb.Sheets[sheetName];
+          rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+          sourceName = file.name;
+        } else {
+          const input = (g('va-ctrl-drive-id').value || '').trim();
+          if (!input) throw new Error('Please paste the file ID or link.');
+          btn.textContent = 'Fetching…';
+          const result = await vaCtrlFetchDriveRows(input);
+          rows = result.rows;
+          sourceName = result.source;
+        }
+
+        if (!rows.length) throw new Error('The sheet appears to be empty.');
+        const hdrs = rows[0].map(h => (h || '').toString().trim().toUpperCase());
+        const vtI = hdrs.findIndex(h => h === 'VT');
+        const charI = hdrs.findIndex(h => h === 'CHARACTER');
+        const epI = hdrs.findIndex(h => h === 'EPISODE');
+        const scriptI = hdrs.findIndex(h => h === 'SCRIPT');
+        if (vtI < 0) throw new Error(`VT column not found. Detected columns: ${rows[0].join(', ')}`);
+        if (charI < 0) throw new Error('CHARACTER column not found.');
+
+        const vtStats = {};
+        for (const row of rows.slice(1)) {
+          const vt = (row[vtI] || '').toString().trim();
+          const char = (row[charI] || '').toString().trim();
+          const ep = epI >= 0 ? (row[epI] || '').toString().trim() : '';
+          if (!vt || !char) continue;
+          const scriptText = scriptI >= 0 ? (row[scriptI] || '').toString() : '';
+          const weight = vaWordWeight(scriptText);
+          if (!vtStats[vt]) vtStats[vt] = { lines: 0, extra: 0, chars: new Set(), eps: new Set() };
+          vtStats[vt].lines += weight;
+          vtStats[vt].extra += weight - 1;
+          vtStats[vt].chars.add(char);
+          if (ep) vtStats[vt].eps.add(ep);
+        }
+        VA_STATE._ctrlStats = vtStats;
+        const sorted = Object.entries(vtStats).sort((a, b) => b[1].lines - a[1].lines);
+        g('va-summary-tbody').innerHTML = sorted.length
+          ? sorted.map(([vt, s], i) => `<tr class="${i % 2 ? 'alt' : ''}">
+              <td style="font-weight:600;color:var(--acc2)">${esc(vt)}</td>
+              <td style="text-align:center;font-weight:700;color:var(--ok)">${s.lines}</td>
+              <td style="font-size:11px;color:var(--muted)">${[...s.chars].sort().join(', ')}</td>
+              <td style="font-size:11px;color:var(--muted)">${[...s.eps].sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, ''))).join(', ')}</td>
+            </tr>`).join('')
+          : '<tr><td colspan="4"><div class="empty"><span class="empty-icon">📊</span>No VT data found</div></td></tr>';
+        vaShowTab('summary', document.querySelector('.va-tabs .tab:nth-child(2)'));
+        g('va-ctrl-export').style.display = '';
+        const totalLines = sorted.reduce((a, [, s]) => a + s.lines, 0);
+        vaSetStat(`Lines per VT recounted · ${sorted.length} VTs · ${totalLines} lines · from ${sourceName}`);
+      } catch (err) { alert('Error: ' + err.message); }
+      btn.disabled = false; btn.textContent = '▶  Count Lines per VT';
+    }
+
+    function vaCtrlExport() {
+      const vtStats = VA_STATE._ctrlStats;
+      if (!vtStats) { alert('Run "Count Lines per VT" first.'); return; }
+      const wb = XLSX.utils.book_new();
+      const rows = [['VT', 'Total Lines', 'Additional Lines', 'Characters', 'Episode Count', 'Episodes']];
+      Object.entries(vtStats).sort((a, b) => b[1].lines - a[1].lines).forEach(([vt, s]) => {
+        const epsSorted = [...s.eps].sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+        rows.push([vt, s.lines, s.extra || 0, [...s.chars].sort().join(', '), s.eps.size, epsSorted.join(', ')]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 14 }, { wch: 120 }];
+      ws['!autofilter'] = { ref: ws['!ref'] };
+      XLSX.utils.book_append_sheet(wb, ws, 'Lines per VT');
+      XLSX.writeFile(wb, `lines_per_vt_${today()}.xlsx`);
+    }
+
+    async function vaExport() {
+      if (!VA_STATE.fullScript.length) { alert('Run the analysis first.'); return; }
+      const vtMap = VA_STATE.vtMap, lines = VA_STATE.fullScript;
+      const wb = XLSX.utils.book_new();
+      const showName = g('show-name').textContent || 'Show';
+
+      // ── Sheet 1: Full Script ──
+      const wsData = [['EPISODE', 'TIMESTAMP IN', 'TIMESTAMP OUT', 'CHARACTER', 'GENDER', 'VT', 'Script']];
+      lines.forEach(l => wsData.push([l.ep, l.tsIn, l.tsOut, l.char, l.gender, vtMap[l.char.toUpperCase().trim()] || '', l.dialogue]));
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = [{ wch: 8 }, { wch: 14 }, { wch: 14 }, { wch: 22 }, { wch: 8 }, { wch: 22 }, { wch: 70 }];
+      ws['!autofilter'] = { ref: ws['!ref'] };
+      // Row colors: white=even ep, light gray=odd ep
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let R = 1; R <= range.e.r; R++) {
+        const epNum = parseInt((wsData[R] ? wsData[R][0] : '').replace(/\D/g, '')) || 0;
+        const fill = epNum % 2 === 0 ? { patternType: 'solid', fgColor: { rgb: 'FFFFFF' } } : { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } };
+        for (let C = 0; C <= 6; C++) {
+          const addr = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[addr]) ws[addr] = { t: 'z', v: '' };
+          ws[addr].s = { fill, font: { name: 'Arial', sz: 10 } };
+        }
+      }
+      for (let C = 0; C <= 6; C++) {
+        const addr = XLSX.utils.encode_cell({ r: 0, c: C });
+        ws[addr].s = { fill: { patternType: 'solid', fgColor: { rgb: '1A3A6E' } }, font: { name: 'Arial', sz: 10, bold: true, color: { rgb: 'FFFFFF' } } };
+      }
+      XLSX.utils.book_append_sheet(wb, ws, 'Full Script');
+
+      // ── Sheet 2: Lines per VT ──
+      const vtStats = {};
+      for (const l of lines) {
+        const vt = vtMap[l.char.toUpperCase().trim()] || '(unassigned)';
+        if (!vtStats[vt]) vtStats[vt] = { lines: 0, chars: new Set(), eps: new Set() };
+        vtStats[vt].lines++; vtStats[vt].chars.add(l.char); vtStats[vt].eps.add(l.ep);
+      }
+      const summaryData = [['VT', 'Total Lines', 'Characters', 'Episode Count', 'Episodes']];
+      Object.entries(vtStats).sort((a, b) => b[1].lines - a[1].lines).forEach(([vt, s]) => {
+        const epsSorted = [...s.eps].sort((a, b) => parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, '')));
+        summaryData.push([vt, s.lines, [...s.chars].sort().join(', '), s.eps.size, epsSorted.join(', ')]);
+      });
+      const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+      ws2['!cols'] = [{ wch: 25 }, { wch: 12 }, { wch: 40 }, { wch: 14 }, { wch: 120 }];
+      ws2['!autofilter'] = { ref: ws2['!ref'] };
+      XLSX.utils.book_append_sheet(wb, ws2, 'Lines per VT');
+
+      // ── Sheet 3: Episodes per VT ──
+      // One row per VT per episode: Episode | VT | Characters | Lines | Delivered
+      const epVtData = [['Episode', 'VT', 'Characters', 'Lines in Episode', 'Delivered']];
+      const epVtMap = {};
+      for (const l of lines) {
+        const vt = vtMap[l.char.toUpperCase().trim()] || null;
+        if (!vt) continue;
+        const key = l.ep + '|' + vt;
+        if (!epVtMap[key]) epVtMap[key] = { ep: l.ep, vt, chars: new Set(), lines: 0 };
+        epVtMap[key].lines++;
+        epVtMap[key].chars.add(l.char);
+      }
+      Object.values(epVtMap)
+        .sort((a, b) => {
+          const en = parseInt(a.ep.replace(/\D/g, '')) - parseInt(b.ep.replace(/\D/g, ''));
+          return en !== 0 ? en : a.vt.localeCompare(b.vt);
+        })
+        .forEach(r => epVtData.push([r.ep, r.vt, [...r.chars].join(', '), r.lines, '']));
+      const ws3 = XLSX.utils.aoa_to_sheet(epVtData);
+      ws3['!cols'] = [{ wch: 10 }, { wch: 25 }, { wch: 35 }, { wch: 16 }, { wch: 12 }];
+      ws3['!autofilter'] = { ref: ws3['!ref'] };
+      // Alternating colors by episode
+      const r3 = XLSX.utils.decode_range(ws3['!ref']);
+      for (let R = 1; R <= r3.e.r; R++) {
+        const epNum = parseInt((epVtData[R] ? epVtData[R][0] : '').replace(/\D/g, '')) || 0;
+        const fill = epNum % 2 === 0 ? { patternType: 'solid', fgColor: { rgb: 'FFFFFF' } } : { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } };
+        for (let C = 0; C <= 4; C++) {
+          const addr = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws3[addr]) ws3[addr] = { t: 'z', v: '' };
+          ws3[addr].s = { fill, font: { name: 'Arial', sz: 10 } };
+        }
+      }
+      for (let C = 0; C <= 4; C++) {
+        const addr = XLSX.utils.encode_cell({ r: 0, c: C });
+        ws3[addr].s = { fill: { patternType: 'solid', fgColor: { rgb: '1A3A6E' } }, font: { name: 'Arial', sz: 10, bold: true, color: { rgb: 'FFFFFF' } } };
+      }
+      XLSX.utils.book_append_sheet(wb, ws3, 'Episodes per VT');
+
+      const vaShow = VA_STATE.showName || showName || 'Show';
+      const vaLang = VA_STATE.lang || '';
+      const fName = `Full_Script_${vaShow.replace(/[^a-z0-9]/gi, '_')}${vaLang ? '_' + vaLang : ''}_${today()}.xlsx`;
+      XLSX.writeFile(wb, fName);
+    }
+  </script>
+  <!-- DISCLAIMER MODAL -->
+  <div id="disclaimerModal" class="disclaimer-modal-overlay">
+    <div class="disclaimer-modal">
+      <div class="disclaimer-modal-header">
+        <span class="disclaimer-modal-icon">i</span>
+        Disclaimer
+      </div>
+      <div class="disclaimer-modal-body">
+        This tool is intended for authorized use only. By continuing, you acknowledge that you are an approved
+        vendor or collaborator of Go Global Consulting and agree to comply with all applicable confidentiality
+        and information security policies.
+        <br><br>
+        The results provided are for quality control support purposes only and do not replace professional validation.
+      </div>
+      <button id="acceptDisclaimer" class="disclaimer-accept-btn">Accept</button>
+    </div>
+  </div>
+  <script>
+    // ── Disclaimer modal ──────────────────────────────────────────────────────────
+    (function () {
+      const modal = document.getElementById('disclaimerModal');
+      const btn = document.getElementById('acceptDisclaimer');
+
+      const KEY = 'disclaimerAccepted';
+      const EXP_DAYS = 1;
+
+      function isExpired() {
+        const stored = localStorage.getItem(KEY);
+        if (!stored) return true;
+        try {
+          const data = JSON.parse(stored);
+          const expiry = data.timestamp + (EXP_DAYS * 24 * 60 * 60 * 1000);
+          return Date.now() > expiry;
+        } catch {
+          return true;
+        }
+      }
+
+      if (isExpired()) {
+        modal.style.display = 'flex';
+      }
+
+      btn.addEventListener('click', function () {
+        localStorage.setItem(KEY, JSON.stringify({ timestamp: Date.now() }));
+        modal.style.display = 'none';
+      });
+    })();
+  </script>
+  <!-- DISCLAIMER (inline footer) -->
+  <div class="disclaimer-block">
+    <div class="disclaimer-title">
+      <span>&#x1F6C8;</span>Disclaimer
+    </div>
+    <div class="disclaimer-body">
+      This tool is the property of Go Global Consulting and is intended exclusively for authorized internal use
+      by approved vendors and collaborators. All rights reserved. Unauthorized access, use, reproduction, or
+      distribution of this tool or its outputs is strictly prohibited.
+      <br><br>
+      The results generated by this tool are provided for quality control support purposes only and do not
+      replace professional review or final validation. Go Global Consulting makes no warranties regarding the
+      completeness, accuracy, or reliability of the output.
+      <br><br>
+      By using this tool, you acknowledge and agree to comply with applicable confidentiality, data protection,
+      and information security policies.
+    </div>
+  </div>
+</body>
+
+</html>
