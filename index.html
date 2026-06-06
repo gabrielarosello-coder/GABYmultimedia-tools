@@ -2550,7 +2550,15 @@
         const chips = allEps.map(ep => {
           const isMiss = r.missing.includes(ep);
           const n = ep.replace(/[^0-9]/g, '');
-          return `<span class="ep ${isMiss ? 'ep-miss' : 'ep-ok'}">${n}</span>`;
+          // Gap info for this episode
+          const gapR = GAP && GAP.results && GAP.results[r.vt];
+          const epLines = gapR ? gapR.lines.filter(l => l.ep === ep) : [];
+          const epMiss  = epLines.filter(l => l.missing).length;
+          const epTotal = epLines.length;
+          const gapTag  = epTotal > 0 ? ` <span style="font-size:9px;opacity:.8">${epMiss}/${epTotal}</span>` : '';
+          const chipCls = isMiss ? 'ep-miss' : (epMiss > 0 ? 'ep-ok' : 'ep-ok');
+          const chipStyle = !isMiss && epMiss > 0 ? ' style="outline:1px solid var(--warn);outline-offset:1px"' : '';
+          return `<span class="ep ${chipCls}"${chipStyle}>${n}${gapTag}</span>`;
         }).join('');
         const missNums = r.missing.map(e => e.replace(/[^0-9]/g, '')).join(', ');
         const folderLink = r.folderUrl ? `<a class="folder-link" href="${esc(r.folderUrl)}" target="_blank">📁 Open folder in Drive</a>` : '';
@@ -2878,6 +2886,7 @@
     function gapRefreshCard(vt) {
       const card=gapFindCard(vt); if(!card) return;
       const body=card.querySelector('.vtc-body'); if(!body) return;
+      // Refresh gap section
       const old=body.querySelector('.gap-section'); if(old) old.remove();
       const r=GAP.results[vt]; if(!r||!r.lines.length) return;
       const missing=r.lines.filter(l=>l.missing);
@@ -2890,7 +2899,8 @@
         const eps=[...new Set(missing.map(l=>l.ep))].sort((a,b)=>gapEpNum(a)-gapEpNum(b));
         for (const ep of eps) {
           const epL=missing.filter(l=>l.ep===ep);
-          html+=`<div class="gap-ep-lbl">${esc(ep)} — ${epL.length} line${epL.length!==1?'s':''}</div>`;
+          const epTotal=r.lines.filter(l=>l.ep===ep).length;
+          html+=`<div class="gap-ep-lbl">${esc(ep)} — ${epL.length}/${epTotal} lines missing</div>`;
           epL.forEach(l=>{
             html+=`<div class="gap-line-row"><span class="gap-line-ts">${esc(l.timeIn)}</span><span class="gap-line-char">${esc(l.character)}</span><span class="gap-line-txt">${esc((l.script||'').slice(0,80))}${(l.script||'').length>80?'…':''}</span></div>`;
           });
@@ -2899,6 +2909,25 @@
       html+=`</div>`;
       const sec=document.createElement('div'); sec.innerHTML=html;
       body.appendChild(sec.firstChild);
+      // Refresh episode chips to show gap counts
+      body.querySelectorAll('.ep.ep-ok, .ep.ep-miss').forEach(chip => {
+        const n = chip.textContent.replace(/\D/g,'').slice(0,4); // just the ep number
+        if (!n) return;
+        // Find matching ep key in results
+        const epKey = r.lines.find(l => gapEpNum(l.ep).toString() === n);
+        if (!epKey) return;
+        const ep = epKey.ep;
+        const epLines = r.lines.filter(l=>l.ep===ep);
+        const epMiss  = epLines.filter(l=>l.missing).length;
+        const epTotal = epLines.length;
+        if (epTotal > 0) {
+          chip.innerHTML = `${n} <span style="font-size:9px;opacity:.8">${epMiss}/${epTotal}</span>`;
+          if (epMiss > 0 && !chip.classList.contains('ep-miss')) {
+            chip.style.outline = '1px solid var(--warn)';
+            chip.style.outlineOffset = '1px';
+          }
+        }
+      });
     }
 
     async function runGapAnalysis(vtReports, driveFiles, scriptLines) {
@@ -2930,11 +2959,13 @@
             const voiceThresh=noise*4;
             const bgThresh=noise*3;
             log(`Gap: ${vt}/${ep} noise=${(20*Math.log10(Math.max(noise,1e-10))).toFixed(1)}dB threshold=${(20*Math.log10(Math.max(voiceThresh,1e-10))).toFixed(1)}dB`);
-            // Analyze each line
+            // Analyze each line — extend window by 0.5s each side for timing tolerance
+            const TOLERANCE = 0.5;
             for (let i=0;i<epLines.length;i++) {
               if (i%30===0) await new Promise(r=>setTimeout(r,0));
               const l=epLines[i];
-              const t0=gapTsToSec(l.timeIn),t1=gapTsToSec(l.timeOut);
+              const t0=Math.max(0, gapTsToSec(l.timeIn)-TOLERANCE);
+              const t1=Math.min(buf.duration, gapTsToSec(l.timeOut)+TOLERANCE);
               if (t1<=t0||t0>buf.duration) continue;
               const rms=gapRMS(buf,t0,t1);
               GAP.results[vt].lines.push({ep,timeIn:l.timeIn,timeOut:l.timeOut,character:l.character,script:l.script,missing:rms<voiceThresh});
