@@ -2858,6 +2858,130 @@
       return m ? parseInt(m[1],10) : null;
     }
 
+    // Parse WAV header from first 44 bytes
+    function parseWavHeader(ab) {
+      const v = new DataView(ab);
+      // WAV PCM header: RIFF chunk + fmt subchunk
+      const audioFormat  = v.getUint16(20, true); // 1=PCM
+      const numChannels  = v.getUint16(22, true);
+      const sampleRate   = v.getUint32(24, true);
+      const bitsPerSample= v.getUint16(34, true);
+      const byteRate     = v.getUint32(28, true); // sampleRate * channels * bitsPerSample/8
+      // Find 'data' chunk offset (usually 44 but can vary)
+      let dataOffset = 12;
+      while (dataOffset < ab.byteLength - 8) {
+        const id = String.fromCharCode(v.getUint8(dataOffset), v.getUint8(dataOffset+1), v.getUint8(dataOffset+2), v.getUint8(dataOffset+3));
+        const size = v.getUint32(dataOffset+4, true);
+        if (id === 'data') { dataOffset += 8; break; }
+        dataOffset += 8 + size;
+      }
+      return { audioFormat, numChannels, sampleRate, bitsPerSample, byteRate, dataOffset };
+    }
+
+    // Calculate RMS directly from raw PCM bytes (no AudioContext needed)
+    function rmsFromPCM(ab, wav, startByte, endByte) {
+      const view = new DataView(ab);
+      const bytesPerSample = wav.bitsPerSample / 8;
+      const maxVal = Math.pow(2, wav.bitsPerSample - 1);
+      let sumSq = 0, n = 0;
+      const start = Math.max(0, startByte);
+      const end   = Math.min(ab.byteLength, endByte);
+      for (let i = start; i < end - bytesPerSample + 1; i += bytesPerSample) {
+        let sample = 0;
+        if (wav.bitsPerSample === 16) sample = view.getInt16(i, true);
+        else if (wav.bitsPerSample === 24) {
+          sample = (view.getUint8(i) | (view.getUint8(i+1)<<8) | (view.getInt8(i+2)<<16));
+        } else if (wav.bitsPerSample === 32) sample = view.getInt32(i, true);
+        else if (wav.bitsPerSample === 8) sample = view.getUint8(i) - 128;
+        sumSq += (sample / maxVal) ** 2;
+        n++;
+      }
+      return n > 0 ? Math.sqrt(sumSq / n) : 0;
+    }
+
+    async function gapFetchRange(fileId, byteStart, byteEnd) {
+      const headers = { 'Range': `bytes=${byteStart}-${byteEnd}` };
+      if (GOOG_TOKEN) headers['Authorization'] = `Bearer ${GOOG_TOKEN}`;
+      const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
+      const r = await fetch(url, { headers });
+      if (!r.ok && r.status !== 206) throw new Error(`HTTP ${r.status}`);
+      return r.arrayBuffer();
+    }
+
+    async function gapAnalyzeFileRanges(fileId, epLines, TOLERANCE) {
+      // Step 1: fetch first 200 bytes to get WAV header
+      const headerBuf = await gapFetchRange(fileId, 0, 199);
+      const wav = parseWavHeader(headerBuf);
+      if (wav.audioFormat !== 1 || wav.sampleRate === 0) {
+        // Not PCM — fall back to full download
+        return null;
+      }
+      const bytesPerFrame = wav.numChannels * (wav.bitsPerSample / 8);
+      const tsToBytes = (sec) => wav.dataOffset + Math.floor(sec * wav.sampleRate) * bytesPerFrame;
+
+      // Step 2: build merged segments to fetch (with tolerance, merge overlapping)
+      const segs = epLines.map(l => ({
+        t0: Math.max(0, gapTsToSec(l.timeIn) - TOLERANCE),
+        t1: gapTsToSec(l.timeOut) + TOLERANCE,
+        line: l
+      })).filter(s => s.t1 > s.t0);
+
+      // Step 3: estimate noise floor — fetch a few small silent gaps
+      // Use gaps between lines
+      const sorted = [...segs].sort((a,b) => a.t0 - b.t0);
+      let noiseRMS = 0.002; // default
+      const noiseSegs = [];
+      for (let i = 0; i < sorted.length - 1 && noiseSegs.length < 3; i++) {
+        const gs = sorted[i].t1 + 0.1, ge = sorted[i+1].t0 - 0.1;
+        if (ge - gs >= 0.3) noiseSegs.push({ t0: gs, t1: ge });
+      }
+      if (noiseSegs.length) {
+        const noiseSamples = await Promise.all(noiseSegs.map(async ns => {
+          const b0 = tsToBytes(ns.t0), b1 = tsToBytes(ns.t1);
+          const buf = await gapFetchRange(fileId, b0, b1 - 1);
+          return rmsFromPCM(buf, wav, 0, buf.byteLength);
+        }));
+        noiseSamples.sort((a,b) => a-b);
+        noiseRMS = noiseSamples[Math.floor(noiseSamples.length/2)];
+      }
+      const voiceThresh = noiseRMS * 4;
+      log(`Gap: noise=${(20*Math.log10(Math.max(noiseRMS,1e-10))).toFixed(1)}dB thresh=${(20*Math.log10(Math.max(voiceThresh,1e-10))).toFixed(1)}dB`);
+
+      // Step 4: fetch each line segment in parallel (batches of 5)
+      const results = [];
+      const BATCH = 5;
+      for (let i = 0; i < segs.length; i += BATCH) {
+        const batch = segs.slice(i, i + BATCH);
+        const fetched = await Promise.all(batch.map(async seg => {
+          const b0 = tsToBytes(seg.t0), b1 = tsToBytes(seg.t1);
+          const buf = await gapFetchRange(fileId, b0, b1 - 1);
+          const rms = rmsFromPCM(buf, wav, 0, buf.byteLength);
+          return { ...seg, rms, missing: rms < voiceThresh };
+        }));
+        results.push(...fetched);
+        await new Promise(r => setTimeout(r, 0)); // yield to UI
+      }
+
+      // Step 5: check background audio — sample a couple of gaps
+      let bgAudio = false;
+      if (noiseSegs.length >= 2) {
+        const bgSamples = await Promise.all(noiseSegs.slice(0,2).map(async ns => {
+          const b0 = tsToBytes(ns.t0), b1 = tsToBytes(ns.t1);
+          const buf = await gapFetchRange(fileId, b0, b1 - 1);
+          return rmsFromPCM(buf, wav, 0, buf.byteLength);
+        }));
+        const avgBg = bgSamples.reduce((s,v) => s+v, 0) / bgSamples.length;
+        bgAudio = avgBg > noiseRMS * 3;
+      }
+
+      return { lines: results.map(s => ({
+        ep: null, // filled in by caller
+        timeIn: s.line.timeIn, timeOut: s.line.timeOut,
+        character: s.line.character, script: s.line.script,
+        missing: s.missing
+      })), bgAudio };
+    }
+
     async function gapDownload(fileId) {
       const headers = {};
       if (GOOG_TOKEN) headers['Authorization'] = `Bearer ${GOOG_TOKEN}`;
@@ -2949,38 +3073,48 @@
           const df=driveFiles.find(f=>f.folder===report.folderName&&gapEpFromStem(f.stem)===gapEpNum(ep));
           if (!df) { log(`Gap: no file for ${vt}/${ep}`); done++; continue; }
           try {
-            log(`Gap: downloading ${df.name}…`);
-            const buf=await gapDownload(df.id);
-            const epLines=vtLines.filter(l=>gapEpNum(l.episode)===gapEpNum(ep));
-            if (!epLines.length) { done++; continue; }
-            // Calibrate noise floor
-            const segs=epLines.map(l=>({t0:gapTsToSec(l.timeIn),t1:gapTsToSec(l.timeOut)})).filter(s=>s.t1>s.t0);
-            const noise=gapNoiseFloor(buf,segs);
-            const voiceThresh=noise*4;
-            const bgThresh=noise*3;
-            log(`Gap: ${vt}/${ep} noise=${(20*Math.log10(Math.max(noise,1e-10))).toFixed(1)}dB threshold=${(20*Math.log10(Math.max(voiceThresh,1e-10))).toFixed(1)}dB`);
-            // Analyze each line — extend window by 0.5s each side for timing tolerance
+            log(`Gap: analyzing ${df.name} (range requests)…`);
             const TOLERANCE = 0.5;
-            for (let i=0;i<epLines.length;i++) {
-              if (i%30===0) await new Promise(r=>setTimeout(r,0));
-              const l=epLines[i];
-              const t0=Math.max(0, gapTsToSec(l.timeIn)-TOLERANCE);
-              const t1=Math.min(buf.duration, gapTsToSec(l.timeOut)+TOLERANCE);
-              if (t1<=t0||t0>buf.duration) continue;
-              const rms=gapRMS(buf,t0,t1);
-              GAP.results[vt].lines.push({ep,timeIn:l.timeIn,timeOut:l.timeOut,character:l.character,script:l.script,missing:rms<voiceThresh});
+            const epLines = vtLines.filter(l=>gapEpNum(l.episode)===gapEpNum(ep));
+            if (!epLines.length) { done++; continue; }
+
+            let lineResults, bgAudio = false;
+
+            // Try fast range-based analysis first
+            const rangeResult = await gapAnalyzeFileRanges(df.id, epLines, TOLERANCE).catch(() => null);
+            if (rangeResult) {
+              lineResults = rangeResult.lines.map((l, i) => ({ ...l, ep }));
+              bgAudio = rangeResult.bgAudio;
+            } else {
+              // Fallback: full download + AudioContext
+              log(`Gap: falling back to full download for ${df.name}`);
+              const buf = await gapDownload(df.id);
+              const segs = epLines.map(l=>({t0:gapTsToSec(l.timeIn),t1:gapTsToSec(l.timeOut)})).filter(s=>s.t1>s.t0);
+              const noise = gapNoiseFloor(buf, segs);
+              const voiceThresh = noise * 4;
+              lineResults = [];
+              for (const l of epLines) {
+                const t0 = Math.max(0, gapTsToSec(l.timeIn) - TOLERANCE);
+                const t1 = Math.min(buf.duration, gapTsToSec(l.timeOut) + TOLERANCE);
+                if (t1 <= t0) continue;
+                const rms = gapRMS(buf, t0, t1);
+                lineResults.push({ ep, timeIn: l.timeIn, timeOut: l.timeOut, character: l.character, script: l.script, missing: rms < voiceThresh });
+              }
+              // bg audio check
+              const sorted = [...segs].sort((a,b)=>a.t0-b.t0);
+              const bgSamples = [];
+              for (let i=0;i<sorted.length-1&&bgSamples.length<4;i++) {
+                const gs=sorted[i].t1+0.3, ge=sorted[i+1].t0-0.3;
+                if (ge-gs>=0.5) bgSamples.push(gapRMS(buf,gs,ge));
+              }
+              if (bgSamples.length>=2) {
+                const avg = bgSamples.reduce((s,v)=>s+v,0)/bgSamples.length;
+                bgAudio = avg > noise * 3;
+              }
             }
-            // Check background audio in gaps
-            const sorted=[...segs].sort((a,b)=>a.t0-b.t0);
-            const bgSamples=[];
-            for (let i=0;i<sorted.length-1&&bgSamples.length<6;i++) {
-              const gs=sorted[i].t1+0.3,ge=sorted[i+1].t0-0.3;
-              if (ge-gs>=0.5) bgSamples.push(gapRMS(buf,gs,ge));
-            }
-            if (bgSamples.length>=3) {
-              const avg=bgSamples.reduce((s,v)=>s+v,0)/bgSamples.length;
-              if (avg>bgThresh) GAP.results[vt].bgAudio=true;
-            }
+
+            for (const l of lineResults) GAP.results[vt].lines.push(l);
+            if (bgAudio) GAP.results[vt].bgAudio = true;
           } catch(e) { log(`Gap error ${df.name}: ${e.message}`); }
           done++;
           g('gap-prog-main').style.width=Math.round(done/total*100)+'%';
