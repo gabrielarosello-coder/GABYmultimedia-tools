@@ -3553,6 +3553,7 @@
         <button class="btn-run" id="aqa-btn-run" onclick="aqaRun()">▶ Run Audio QA</button>
         <div class="pbar" style="margin-top:8px"><div class="pbar-fill" id="aqa-pbar"></div></div>
         <div class="logbox" id="aqa-log"></div>
+        <p style="font-size:10px;color:var(--muted);line-height:1.4;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">⚠ Results use RMS detection with ±1s tolerance. Always review flagged lines manually.</p>
       </div>
     </aside>
     <main class="main">
@@ -3630,23 +3631,13 @@
   // ── Fetch full script with timestamps ───────────────────────────
   async function fetchScriptFull(sid, sname) {
     if (!GOOG_TOKEN) throw new Error('Sign in with Google first');
-    // Export sheet as CSV via Drive API (already enabled, no Sheets API needed)
     const encName = encodeURIComponent(sname);
-    const exportUrl = `https://www.googleapis.com/drive/v3/files/${sid}/export?mimeType=text/csv&key=${API_KEY}`;
-    // Try tab-specific export first
-    let text;
-    try {
-      const r = await fetch(exportUrl, { headers: { 'Authorization': `Bearer ${GOOG_TOKEN}` } });
-      if (!r.ok) throw new Error(`${r.status}`);
-      text = await r.text();
-    } catch(e) {
-      // Fallback: gviz with auth header
-      const url = `https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&sheet=${encName}&headers=1`;
-      const r2 = await fetch(url, { headers: { 'Authorization': `Bearer ${GOOG_TOKEN}` } });
-      if (!r2.ok) throw new Error(`Sheet fetch failed: ${r2.status}`);
-      text = await r2.text();
-    }
-    if (!text || text.trim().startsWith('<')) throw new Error('Could not read sheet — check tab name and permissions');
+    // gviz/tq with Bearer token works without Sheets API
+    const url = `https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&sheet=${encName}&headers=1`;
+    const r = await fetch(url, { headers: { 'Authorization': `Bearer ${GOOG_TOKEN}` } });
+    if (!r.ok) throw new Error(`Sheet fetch failed: ${r.status} — check Sheet ID and tab name`);
+    const text = await r.text();
+    if (!text || text.trim().startsWith('<')) throw new Error('Cannot read sheet — check tab name and that you have access');
     const rows = parseCSV(text);
     if (!rows.length) throw new Error('Empty sheet');
     const hdrs = rows[0].map(h => String(h||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,''));
@@ -3654,7 +3645,7 @@
     const ei=fi(['EPISODE','EP']), vi=fi(['VT']),
           ti=fi(['TIMESTAMPIN','TIMEIN']), oi=fi(['TIMESTAMPOUT','TIMEOUT']),
           ci=fi(['CHARACTER','CHAR','PERSONAJE']), si=fi(['SCRIPT','TEXT','TEXTO']);
-    if (ei < 0 || vi < 0) throw new Error('Could not find EPISODE or VT columns');
+    if (ei < 0 || vi < 0) throw new Error(`Could not find EPISODE or VT columns. Headers found: ${rows[0].join(', ')}`);
     const out = [];
     for (const row of rows.slice(1)) {
       const ep=String(row[ei]||'').trim(), vt=String(row[vi]||'').trim();
@@ -3664,7 +3655,6 @@
       }
     }
     if (!out.length) throw new Error('No rows with EPISODE+VT+timestamps found');
-    aqaLog(`Script: ${out.length} lines, ${[...new Set(out.map(l=>l.vt))].length} VTs`);
     return out;
   }
 
@@ -4109,9 +4099,7 @@
   }
   </script>
 
-  <footer style="position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-top:1px solid var(--border);padding:6px 20px;font-size:10px;color:var(--muted);line-height:1.4;z-index:50;text-align:center">
-    ⚠ Audio analysis uses RMS detection with ±1s tolerance per timestamp. Results may vary depending on recording levels and background noise. Always review flagged lines manually before taking action.
-  </footer>
+
 </body>
 
 </html>
