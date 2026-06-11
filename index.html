@@ -2726,7 +2726,7 @@
     function googleSignIn() {
       const client = google.accounts.oauth2.initTokenClient({
         client_id: GOOG_CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/drive.readonly',
+        scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/spreadsheets.readonly',
         callback: (resp) => {
           if (resp.error) { console.error('Google sign-in error:', resp.error); return; }
           GOOG_TOKEN = resp.access_token;
