@@ -1427,25 +1427,6 @@
       padding: 3px 10px;
       letter-spacing: 0.1em;
     }
-    /* ── Gap Analysis ── */
-    .gap-badge { display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;margin-left:6px;vertical-align:middle;border:1px solid transparent }
-    .gap-badge.analyzing { background:#1a1400;color:var(--yellow);border-color:#3a3000 }
-    .gap-badge.ok        { background:#081a0e;color:var(--ok);border-color:#0f3a1e }
-    .gap-badge.warn      { background:#1a0a00;color:var(--warn);border-color:#3a1e00 }
-    .gap-badge.err       { background:#1a0505;color:var(--danger);border-color:#3a0f0f }
-    .gap-spinner { display:inline-block;width:8px;height:8px;border:1.5px solid transparent;border-top-color:currentColor;border-radius:50%;animation:gspin .7s linear infinite }
-    @keyframes gspin { to { transform:rotate(360deg) } }
-    .gap-section { margin-top:10px;border-top:1px solid var(--border);padding-top:10px }
-    .gap-ok-msg  { font-size:11px;color:var(--ok) }
-    .gap-warn-msg{ font-size:11px;padding:5px 8px;background:var(--surf);border-left:2px solid var(--danger);border-radius:0 4px 4px 0;color:var(--danger);margin-bottom:6px }
-    .gap-miss-title { font-size:11px;font-weight:700;color:var(--warn);margin-bottom:5px }
-    .gap-ep-lbl  { font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:5px 0 3px }
-    .gap-line-row{ font-size:11px;font-family:'IBM Plex Mono',monospace;padding:3px 8px;border-left:2px solid var(--warn);margin-bottom:2px;background:var(--surf);border-radius:0 3px 3px 0 }
-    .gap-line-ts  { color:var(--muted);margin-right:6px }
-    .gap-line-char{ color:var(--acc2);margin-right:6px;font-weight:600 }
-    .gap-line-txt { color:var(--text) }
-    .gap-prog-bar { height:3px;background:var(--surf2);border-radius:2px;overflow:hidden;margin-top:4px }
-    .gap-prog-fill{ height:100%;background:var(--accent);border-radius:2px;transition:width .2s;width:0% }
   </style>
 </head>
 
@@ -1463,6 +1444,7 @@
     <div class="module-switcher">
       <button class="mod-btn" id="mod-assignment" onclick="switchModule('assignment')">📝 VT Assignment</button>
       <button class="mod-btn active" id="mod-delivery" onclick="switchModule('delivery')">📦 Delivery Check</button>
+      <button class="mod-btn" id="mod-audioqa" onclick="switchModule('audioqa')">🎧 Audio QA</button>
     </div>
     <button class="btn-google" id="btn-google-login" onclick="googleSignIn()"
       style="width:auto;margin-left:10px;padding:6px 12px">
@@ -1716,11 +1698,6 @@
         <div class="metric">
           <div class="metric-val cw" id="m-qa">—</div>
           <div class="metric-lbl">QA Issues</div>
-        </div>
-        <div class="metric" id="m-gap-wrap" style="display:none">
-          <div class="metric-val" id="m-gap-val" style="font-size:13px;color:var(--yellow)"><span class="gap-spinner"></span></div>
-          <div class="metric-lbl">Gap Analysis</div>
-          <div class="gap-prog-bar" style="width:60px"><div class="gap-prog-fill" id="gap-prog-main"></div></div>
         </div>
       </div>
       <div class="tabs">
@@ -2251,7 +2228,7 @@
         const { subs, files, subMap } = await scanDrive(fid);
         log(`${files.length} audio files found`); setPbar(68);
         log('Building match preview…');
-        STATE._pending = { combos, files, subs, subMap, checks, customMap, sid, sname };
+        STATE._pending = { combos, files, subs, subMap, checks, customMap };
         setPbar(90);
         // Show match review modal before finalizing
         showMatchModal(combos, subs, files, customMap);
@@ -2369,7 +2346,7 @@
 
     async function confirmMatching() {
       g('match-modal').style.display = 'none';
-      const { combos, files, subs, subMap, checks, sid, sname } = STATE._pending;
+      const { combos, files, subs, subMap, checks } = STATE._pending;
       const matchMap = STATE._matchMap;
       // Build a resolved customMap from user selections
       const resolvedMap = {};
@@ -2421,15 +2398,6 @@
         log(`✓ Done — ${nc}/${vtReports.length} VTs complete, ${completed.length} eps fully delivered`);
         setStat(`${combos.length} expected · ${totalDel} delivered · ${totalMiss} missing · ${qa.length} QA issues · ${completed.length} completed eps`);
         showTab('report', document.querySelector('.tab'));
-        // ── Gap Analysis ──
-        fetchScriptLines(sid, sname).then(scriptLines => {
-          if (scriptLines && scriptLines.length) {
-            log(`Gap: ${scriptLines.length} script lines loaded for ${[...new Set(scriptLines.map(l=>l.vt))].length} VTs`);
-            runGapAnalysis(vtReports, files, scriptLines);
-          } else {
-            log('Gap: no timestamp columns found in sheet — skipping');
-          }
-        }).catch(err => log('Gap fetch error: ' + err.message));
       } catch (err) { log('ERROR: ' + err.message); console.error(err); }
     }
 
@@ -2550,15 +2518,7 @@
         const chips = allEps.map(ep => {
           const isMiss = r.missing.includes(ep);
           const n = ep.replace(/[^0-9]/g, '');
-          // Gap info for this episode
-          const gapR = GAP && GAP.results && GAP.results[r.vt];
-          const epLines = gapR ? gapR.lines.filter(l => l.ep === ep) : [];
-          const epMiss  = epLines.filter(l => l.missing).length;
-          const epTotal = epLines.length;
-          const gapTag  = epTotal > 0 ? ` <span style="font-size:9px;opacity:.8">${epMiss}/${epTotal}</span>` : '';
-          const chipCls = isMiss ? 'ep-miss' : (epMiss > 0 ? 'ep-ok' : 'ep-ok');
-          const chipStyle = !isMiss && epMiss > 0 ? ' style="outline:1px solid var(--warn);outline-offset:1px"' : '';
-          return `<span class="ep ${chipCls}"${chipStyle}>${n}${gapTag}</span>`;
+          return `<span class="ep ${isMiss ? 'ep-miss' : 'ep-ok'}">${n}</span>`;
         }).join('');
         const missNums = r.missing.map(e => e.replace(/[^0-9]/g, '')).join(', ');
         const folderLink = r.folderUrl ? `<a class="folder-link" href="${esc(r.folderUrl)}" target="_blank">📁 Open folder in Drive</a>` : '';
@@ -2755,393 +2715,6 @@
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // ═══════════════════════════════════════════════════
-    // GAP ANALYSIS — reads script timestamps, analyzes audio
-    // ═══════════════════════════════════════════════════
-
-    let GAP = { audioCtx: null, results: {} };
-
-    // Fetch script lines with timestamps — completely separate from fetchSheet
-    async function fetchScriptLines(sid, sname) {
-      const encName = encodeURIComponent(sname);
-      const url = `https://docs.google.com/spreadsheets/d/${sid}/gviz/tq?tqx=out:csv&sheet=${encName}&tq=select%20*&headers=1`;
-      try {
-        const r = await fetch(url);
-        if (!r.ok) return [];
-        const text = await r.text();
-        if (text.trim().startsWith('<')) return [];
-        // Simple but correct CSV parse: split by lines, handle quoted commas
-        const lines = text.split('\n');
-        if (lines.length < 2) return [];
-        // Parse header row
-        const parseRow = line => {
-          const cols = []; let cur = '', inQ = false;
-          for (let i = 0; i < line.length; i++) {
-            const c = line[i];
-            if (inQ) {
-              if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
-              else if (c === '"') { inQ = false; }
-              else cur += c;
-            } else {
-              if (c === '"') { inQ = true; }
-              else if (c === ',') { cols.push(cur); cur = ''; }
-              else cur += c;
-            }
-          }
-          cols.push(cur);
-          return cols;
-        };
-        const hdrs = parseRow(lines[0]).map(h => h.trim().toUpperCase().replace(/[^A-Z0-9]/g,''));
-        const ei  = hdrs.findIndex(h => h === 'EPISODE' || h === 'EP');
-        const vi  = hdrs.findIndex(h => h === 'VT');
-        const ti  = hdrs.findIndex(h => h === 'TIMESTAMPIN' || h === 'TIMEIN');
-        const to  = hdrs.findIndex(h => h === 'TIMESTAMPOUT' || h === 'TIMEOUT');
-        const chi = hdrs.findIndex(h => h === 'CHARACTER' || h === 'PERSONAJE');
-        const sci = hdrs.findIndex(h => h === 'SCRIPT' || h === 'TEXT' || h === 'TEXTO');
-        if (ei < 0 || vi < 0 || ti < 0 || to < 0) return [];
-        const out = [];
-        for (const line of lines.slice(1)) {
-          if (!line.trim()) continue;
-          const cols = parseRow(line);
-          const ep = (cols[ei]||'').trim(), vt = (cols[vi]||'').trim();
-          const timeIn = (cols[ti]||'').trim(), timeOut = (cols[to]||'').trim();
-          if (ep && vt && timeIn && timeOut) {
-            out.push({ episode: ep, vt, timeIn, timeOut,
-              character: chi>=0 ? (cols[chi]||'').trim() : '',
-              script:    sci>=0 ? (cols[sci]||'').trim() : '' });
-          }
-        }
-        return out;
-      } catch(e) { return []; }
-    }
-
-    function gapTsToSec(ts) {
-      const c = (ts||'').replace(',','.');
-      const p = c.split(':');
-      if (p.length===3) return +p[0]*3600 + +p[1]*60 + parseFloat(p[2]);
-      if (p.length===2) return +p[0]*60 + parseFloat(p[1]);
-      return parseFloat(c)||0;
-    }
-
-    function gapRMS(buf, t0, t1) {
-      const sr = buf.sampleRate;
-      const s0 = Math.max(0, Math.floor(t0*sr));
-      const s1 = Math.min(buf.length, Math.ceil(t1*sr));
-      if (s1<=s0) return 0;
-      let sq=0, n=0;
-      for (let ch=0; ch<buf.numberOfChannels; ch++) {
-        const d = buf.getChannelData(ch);
-        for (let i=s0; i<s1; i++) { sq+=d[i]*d[i]; n++; }
-      }
-      return Math.sqrt(sq/Math.max(n,1));
-    }
-
-    function gapNoiseFloor(buf, segs) {
-      const PAD=0.2, MIN=0.5, dur=buf.duration;
-      const sorted = [...segs].sort((a,b)=>a.t0-b.t0);
-      const windows = [];
-      if (sorted.length && sorted[0].t0>MIN+PAD) windows.push({t0:0,t1:sorted[0].t0-PAD});
-      for (let i=0;i<sorted.length-1;i++) {
-        const gs=sorted[i].t1+PAD, ge=sorted[i+1].t0-PAD;
-        if (ge-gs>=MIN) windows.push({t0:gs,t1:ge});
-      }
-      if (sorted.length && dur-sorted[sorted.length-1].t1>MIN+PAD)
-        windows.push({t0:sorted[sorted.length-1].t1+PAD,t1:dur});
-      if (!windows.length) return 0.002;
-      const samples = windows.slice(0,8).map(w=>gapRMS(buf,w.t0,w.t1)).sort((a,b)=>a-b);
-      return samples[Math.floor(samples.length/2)];
-    }
-
-    function gapEpNum(s) { return parseInt((s||'').replace(/\D/g,''),10)||0; }
-    function gapEpFromStem(stem) {
-      const m=(stem||'').match(/(?:ep[_\-\s]?)?(\d{1,4})/i);
-      return m ? parseInt(m[1],10) : null;
-    }
-
-    // Parse WAV header from first 44 bytes
-    function parseWavHeader(ab) {
-      const v = new DataView(ab);
-      // WAV PCM header: RIFF chunk + fmt subchunk
-      const audioFormat  = v.getUint16(20, true); // 1=PCM
-      const numChannels  = v.getUint16(22, true);
-      const sampleRate   = v.getUint32(24, true);
-      const bitsPerSample= v.getUint16(34, true);
-      const byteRate     = v.getUint32(28, true); // sampleRate * channels * bitsPerSample/8
-      // Find 'data' chunk offset (usually 44 but can vary)
-      let dataOffset = 12;
-      while (dataOffset < ab.byteLength - 8) {
-        const id = String.fromCharCode(v.getUint8(dataOffset), v.getUint8(dataOffset+1), v.getUint8(dataOffset+2), v.getUint8(dataOffset+3));
-        const size = v.getUint32(dataOffset+4, true);
-        if (id === 'data') { dataOffset += 8; break; }
-        dataOffset += 8 + size;
-      }
-      return { audioFormat, numChannels, sampleRate, bitsPerSample, byteRate, dataOffset };
-    }
-
-    // Calculate RMS directly from raw PCM bytes (no AudioContext needed)
-    function rmsFromPCM(ab, wav, startByte, endByte) {
-      const view = new DataView(ab);
-      const bytesPerSample = wav.bitsPerSample / 8;
-      const maxVal = Math.pow(2, wav.bitsPerSample - 1);
-      let sumSq = 0, n = 0;
-      const start = Math.max(0, startByte);
-      const end   = Math.min(ab.byteLength, endByte);
-      for (let i = start; i < end - bytesPerSample + 1; i += bytesPerSample) {
-        let sample = 0;
-        if (wav.bitsPerSample === 16) sample = view.getInt16(i, true);
-        else if (wav.bitsPerSample === 24) {
-          sample = (view.getUint8(i) | (view.getUint8(i+1)<<8) | (view.getInt8(i+2)<<16));
-        } else if (wav.bitsPerSample === 32) sample = view.getInt32(i, true);
-        else if (wav.bitsPerSample === 8) sample = view.getUint8(i) - 128;
-        sumSq += (sample / maxVal) ** 2;
-        n++;
-      }
-      return n > 0 ? Math.sqrt(sumSq / n) : 0;
-    }
-
-    async function gapFetchRange(fileId, byteStart, byteEnd) {
-      const headers = { 'Range': `bytes=${byteStart}-${byteEnd}` };
-      if (GOOG_TOKEN) headers['Authorization'] = `Bearer ${GOOG_TOKEN}`;
-      const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
-      const r = await fetch(url, { headers });
-      if (!r.ok && r.status !== 206) throw new Error(`HTTP ${r.status}`);
-      return r.arrayBuffer();
-    }
-
-    async function gapAnalyzeFileRanges(fileId, epLines, TOLERANCE) {
-      // Step 1: fetch first 200 bytes to get WAV header
-      const headerBuf = await gapFetchRange(fileId, 0, 199);
-      const wav = parseWavHeader(headerBuf);
-      if (wav.audioFormat !== 1 || wav.sampleRate === 0) {
-        // Not PCM — fall back to full download
-        return null;
-      }
-      const bytesPerFrame = wav.numChannels * (wav.bitsPerSample / 8);
-      const tsToBytes = (sec) => wav.dataOffset + Math.floor(sec * wav.sampleRate) * bytesPerFrame;
-
-      // Step 2: build merged segments to fetch (with tolerance, merge overlapping)
-      const segs = epLines.map(l => ({
-        t0: Math.max(0, gapTsToSec(l.timeIn) - TOLERANCE),
-        t1: gapTsToSec(l.timeOut) + TOLERANCE,
-        line: l
-      })).filter(s => s.t1 > s.t0);
-
-      // Step 3: estimate noise floor — fetch a few small silent gaps
-      // Use gaps between lines
-      const sorted = [...segs].sort((a,b) => a.t0 - b.t0);
-      let noiseRMS = 0.002; // default
-      const noiseSegs = [];
-      for (let i = 0; i < sorted.length - 1 && noiseSegs.length < 3; i++) {
-        const gs = sorted[i].t1 + 0.1, ge = sorted[i+1].t0 - 0.1;
-        if (ge - gs >= 0.3) noiseSegs.push({ t0: gs, t1: ge });
-      }
-      if (noiseSegs.length) {
-        const noiseSamples = await Promise.all(noiseSegs.map(async ns => {
-          const b0 = tsToBytes(ns.t0), b1 = tsToBytes(ns.t1);
-          const buf = await gapFetchRange(fileId, b0, b1 - 1);
-          return rmsFromPCM(buf, wav, 0, buf.byteLength);
-        }));
-        noiseSamples.sort((a,b) => a-b);
-        noiseRMS = noiseSamples[Math.floor(noiseSamples.length/2)];
-      }
-      const voiceThresh = noiseRMS * 4;
-      log(`Gap: noise=${(20*Math.log10(Math.max(noiseRMS,1e-10))).toFixed(1)}dB thresh=${(20*Math.log10(Math.max(voiceThresh,1e-10))).toFixed(1)}dB`);
-
-      // Step 4: fetch each line segment in parallel (batches of 5)
-      const results = [];
-      const BATCH = 5;
-      for (let i = 0; i < segs.length; i += BATCH) {
-        const batch = segs.slice(i, i + BATCH);
-        const fetched = await Promise.all(batch.map(async seg => {
-          const b0 = tsToBytes(seg.t0), b1 = tsToBytes(seg.t1);
-          const buf = await gapFetchRange(fileId, b0, b1 - 1);
-          const rms = rmsFromPCM(buf, wav, 0, buf.byteLength);
-          return { ...seg, rms, missing: rms < voiceThresh };
-        }));
-        results.push(...fetched);
-        await new Promise(r => setTimeout(r, 0)); // yield to UI
-      }
-
-      // Step 5: check background audio — sample a couple of gaps
-      let bgAudio = false;
-      if (noiseSegs.length >= 2) {
-        const bgSamples = await Promise.all(noiseSegs.slice(0,2).map(async ns => {
-          const b0 = tsToBytes(ns.t0), b1 = tsToBytes(ns.t1);
-          const buf = await gapFetchRange(fileId, b0, b1 - 1);
-          return rmsFromPCM(buf, wav, 0, buf.byteLength);
-        }));
-        const avgBg = bgSamples.reduce((s,v) => s+v, 0) / bgSamples.length;
-        bgAudio = avgBg > noiseRMS * 3;
-      }
-
-      return { lines: results.map(s => ({
-        ep: null, // filled in by caller
-        timeIn: s.line.timeIn, timeOut: s.line.timeOut,
-        character: s.line.character, script: s.line.script,
-        missing: s.missing
-      })), bgAudio };
-    }
-
-    async function gapDownload(fileId) {
-      const headers = {};
-      if (GOOG_TOKEN) headers['Authorization'] = `Bearer ${GOOG_TOKEN}`;
-      const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
-      const r = await fetch(url, {headers});
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      GAP.audioCtx = GAP.audioCtx || new (window.AudioContext||window.webkitAudioContext)();
-      return GAP.audioCtx.decodeAudioData(await r.arrayBuffer());
-    }
-
-    function gapFindCard(vt) {
-      return [...document.querySelectorAll('.vtc')].find(el=>{
-        const n=el.querySelector('.vtc-name');
-        return n && n.textContent.trim()===vt;
-      })||null;
-    }
-
-    function gapSetBadge(vt, cls, text) {
-      const card = gapFindCard(vt); if (!card) return;
-      let b = card.querySelector('.gap-badge');
-      if (!b) { b=document.createElement('span'); b.className='gap-badge';
-        const nm=card.querySelector('.vtc-name'); if(nm) nm.after(b); }
-      b.className=`gap-badge ${cls}`; b.innerHTML=text;
-    }
-
-    function gapRefreshCard(vt) {
-      const card=gapFindCard(vt); if(!card) return;
-      const body=card.querySelector('.vtc-body'); if(!body) return;
-      // Refresh gap section
-      const old=body.querySelector('.gap-section'); if(old) old.remove();
-      const r=GAP.results[vt]; if(!r||!r.lines.length) return;
-      const missing=r.lines.filter(l=>l.missing);
-      let html=`<div class="gap-section">`;
-      if (r.bgAudio) html+=`<div class="gap-warn-msg">⚠ Background audio detected in silent gaps — possible bad render</div>`;
-      if (!missing.length) {
-        html+=`<div class="gap-ok-msg">🎙 All ${r.lines.length} lines recorded ✓</div>`;
-      } else {
-        html+=`<div class="gap-miss-title">🎙 Missing lines (${missing.length})</div>`;
-        const eps=[...new Set(missing.map(l=>l.ep))].sort((a,b)=>gapEpNum(a)-gapEpNum(b));
-        for (const ep of eps) {
-          const epL=missing.filter(l=>l.ep===ep);
-          const epTotal=r.lines.filter(l=>l.ep===ep).length;
-          html+=`<div class="gap-ep-lbl">${esc(ep)} — ${epL.length}/${epTotal} lines missing</div>`;
-          epL.forEach(l=>{
-            html+=`<div class="gap-line-row"><span class="gap-line-ts">${esc(l.timeIn)}</span><span class="gap-line-char">${esc(l.character)}</span><span class="gap-line-txt">${esc((l.script||'').slice(0,80))}${(l.script||'').length>80?'…':''}</span></div>`;
-          });
-        }
-      }
-      html+=`</div>`;
-      const sec=document.createElement('div'); sec.innerHTML=html;
-      body.appendChild(sec.firstChild);
-      // Refresh episode chips to show gap counts
-      body.querySelectorAll('.ep.ep-ok, .ep.ep-miss').forEach(chip => {
-        const n = chip.textContent.replace(/\D/g,'').slice(0,4); // just the ep number
-        if (!n) return;
-        // Find matching ep key in results
-        const epKey = r.lines.find(l => gapEpNum(l.ep).toString() === n);
-        if (!epKey) return;
-        const ep = epKey.ep;
-        const epLines = r.lines.filter(l=>l.ep===ep);
-        const epMiss  = epLines.filter(l=>l.missing).length;
-        const epTotal = epLines.length;
-        if (epTotal > 0) {
-          chip.innerHTML = `${n} <span style="font-size:9px;opacity:.8">${epMiss}/${epTotal}</span>`;
-          if (epMiss > 0 && !chip.classList.contains('ep-miss')) {
-            chip.style.outline = '1px solid var(--warn)';
-            chip.style.outlineOffset = '1px';
-          }
-        }
-      });
-    }
-
-    async function runGapAnalysis(vtReports, driveFiles, scriptLines) {
-      const active=vtReports.filter(r=>r.status!=='notfound'&&r.deliveredList.length>0);
-      if (!active.length) return;
-      g('m-gap-wrap').style.display='';
-      g('m-gap-val').innerHTML='<span class="gap-spinner"></span>';
-      GAP.results={};
-      let total=active.reduce((s,r)=>s+r.deliveredList.length,0), done=0;
-
-      for (const report of active) {
-        const vt=report.vt;
-        GAP.results[vt]={lines:[],bgAudio:false};
-        const vtLines=scriptLines.filter(l=>l.vt===vt);
-        if (!vtLines.length) { done+=report.deliveredList.length; continue; }
-        gapSetBadge(vt,'analyzing','<span class="gap-spinner"></span> analyzing…');
-
-        for (const ep of report.deliveredList) {
-          const df=driveFiles.find(f=>f.folder===report.folderName&&gapEpFromStem(f.stem)===gapEpNum(ep));
-          if (!df) { log(`Gap: no file for ${vt}/${ep}`); done++; continue; }
-          try {
-            log(`Gap: analyzing ${df.name} (range requests)…`);
-            const TOLERANCE = 0.5;
-            const epLines = vtLines.filter(l=>gapEpNum(l.episode)===gapEpNum(ep));
-            if (!epLines.length) { done++; continue; }
-
-            let lineResults, bgAudio = false;
-
-            // Try fast range-based analysis first
-            const rangeResult = await gapAnalyzeFileRanges(df.id, epLines, TOLERANCE).catch(() => null);
-            if (rangeResult) {
-              lineResults = rangeResult.lines.map((l, i) => ({ ...l, ep }));
-              bgAudio = rangeResult.bgAudio;
-            } else {
-              // Fallback: full download + AudioContext
-              log(`Gap: falling back to full download for ${df.name}`);
-              const buf = await gapDownload(df.id);
-              const segs = epLines.map(l=>({t0:gapTsToSec(l.timeIn),t1:gapTsToSec(l.timeOut)})).filter(s=>s.t1>s.t0);
-              const noise = gapNoiseFloor(buf, segs);
-              const voiceThresh = noise * 4;
-              lineResults = [];
-              for (const l of epLines) {
-                const t0 = Math.max(0, gapTsToSec(l.timeIn) - TOLERANCE);
-                const t1 = Math.min(buf.duration, gapTsToSec(l.timeOut) + TOLERANCE);
-                if (t1 <= t0) continue;
-                const rms = gapRMS(buf, t0, t1);
-                lineResults.push({ ep, timeIn: l.timeIn, timeOut: l.timeOut, character: l.character, script: l.script, missing: rms < voiceThresh });
-              }
-              // bg audio check
-              const sorted = [...segs].sort((a,b)=>a.t0-b.t0);
-              const bgSamples = [];
-              for (let i=0;i<sorted.length-1&&bgSamples.length<4;i++) {
-                const gs=sorted[i].t1+0.3, ge=sorted[i+1].t0-0.3;
-                if (ge-gs>=0.5) bgSamples.push(gapRMS(buf,gs,ge));
-              }
-              if (bgSamples.length>=2) {
-                const avg = bgSamples.reduce((s,v)=>s+v,0)/bgSamples.length;
-                bgAudio = avg > noise * 3;
-              }
-            }
-
-            for (const l of lineResults) GAP.results[vt].lines.push(l);
-            if (bgAudio) GAP.results[vt].bgAudio = true;
-          } catch(e) { log(`Gap error ${df.name}: ${e.message}`); }
-          done++;
-          g('gap-prog-main').style.width=Math.round(done/total*100)+'%';
-          setStat(`Gap analysis: ${done}/${total} files…`);
-          const r=GAP.results[vt];
-          const miss=r.lines.filter(l=>l.missing).length;
-          if (miss>0||r.bgAudio) gapSetBadge(vt,'warn',`⚠ ${miss>0?miss+' missing':''}${miss>0&&r.bgAudio?' · ':''}${r.bgAudio?'bg audio':''}`);
-          gapRefreshCard(vt);
-        }
-        const r=GAP.results[vt];
-        const miss=r.lines.filter(l=>l.missing).length;
-        if (!r.lines.length) gapSetBadge(vt,'err','? no data');
-        else if (miss===0&&!r.bgAudio) gapSetBadge(vt,'ok','✓ audio OK');
-        else { const p=[]; if(miss>0) p.push(`${miss} missing`); if(r.bgAudio) p.push('bg audio'); gapSetBadge(vt,'warn',`⚠ ${p.join(' · ')}`); }
-        gapRefreshCard(vt);
-      }
-
-      const totalMiss=Object.values(GAP.results).reduce((s,r)=>s+r.lines.filter(l=>l.missing).length,0);
-      const totalBg=Object.values(GAP.results).filter(r=>r.bgAudio).length;
-      const totalLines=Object.values(GAP.results).reduce((s,r)=>s+r.lines.length,0);
-      g('gap-prog-main').style.width='100%';
-      if (totalMiss===0&&totalBg===0) g('m-gap-val').innerHTML=`<span style="color:var(--ok)">✓ ${totalLines} OK</span>`;
-      else { const p=[]; if(totalMiss>0)p.push(`${totalMiss} missing`); if(totalBg>0)p.push(`${totalBg} bg audio`); g('m-gap-val').innerHTML=`<span style="color:var(--warn)">⚠ ${p.join(' · ')}</span>`; }
-      log(`Gap complete — ${totalMiss} missing lines, ${totalBg} VTs with bg audio`);
-      setStat(`Delivery check complete · Gap: ${totalMiss} missing lines${totalBg?` · ${totalBg} VTs with bg audio`:''}`);
-    }
-
     // VT ASSIGNMENT MODULE
     // ═══════════════════════════════════════════════════════════════
 
@@ -3166,7 +2739,7 @@
     }
 
     function switchModule(mod) {
-      ['assignment', 'delivery'].forEach(m => {
+      ['assignment', 'delivery', 'audioqa'].forEach(m => {
         const el = document.getElementById('module-' + m);
         if (el) el.style.display = 'none';
         const btn = document.getElementById('mod-' + m);
@@ -3953,6 +3526,580 @@
       and information security policies.
     </div>
   </div>
+  <!-- ══ AUDIO QA MODULE ═══════════════════════════════════ -->
+  <div class="layout module" id="module-audioqa" style="display:none">
+    <aside class="sidebar">
+      <div class="sb-sec">
+        <div class="sb-lbl">Script</div>
+        <div class="field"><label>Google Sheet ID or link</label><input id="aqa-sid" type="text" placeholder="Sheet ID or full URL"></div>
+        <div class="field"><label>Script sheet tab name</label><input id="aqa-sname" type="text" placeholder="e.g. GUION COMPLETO"></div>
+      </div>
+      <div class="sb-sec">
+        <div class="sb-lbl">Audio source</div>
+        <div class="tabs" style="margin-bottom:10px">
+          <button class="tab active" id="aqa-tab-folder" onclick="aqaSetMode('folder',this)">📁 VT Folders</button>
+          <button class="tab" id="aqa-tab-mix" onclick="aqaSetMode('mix',this)">🎚 Final Mix</button>
+        </div>
+        <div id="aqa-folder-cfg">
+          <div class="field"><label>Drive folder (with VT subfolders)</label><input id="aqa-fid" type="text" placeholder="Folder ID or Drive link"></div>
+          <p class="hint">Each subfolder = one VT. WAV files inside matched to script by episode number.</p>
+        </div>
+        <div id="aqa-mix-cfg" style="display:none">
+          <div class="field"><label>Drive link to final mixed WAV</label><input id="aqa-wavid" type="text" placeholder="File ID or Drive link" oninput="aqaCheckReady()"></div>
+          <p class="hint">Audio analysis uses range requests — only timestamps are downloaded, not the full file.</p>
+        </div>
+      </div>
+      <div class="sb-sec" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;min-height:120px">
+        <button class="btn-run" id="aqa-btn-run" onclick="aqaRun()" style="margin-bottom:8px">▶ Run Audio QA</button>
+        <div class="pbar"><div class="pbar-fill" id="aqa-pbar"></div></div>
+        <div class="logbox" id="aqa-log"></div>
+      </div>
+      <div style="padding:10px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);line-height:1.5">
+        ⚠ Audio analysis uses RMS detection with ±1s tolerance per timestamp. Results may vary depending on recording levels and background noise. Always review flagged lines manually before taking action.
+      </div>
+    </aside>
+    <main class="main">
+      <div class="metrics">
+        <div class="metric"><div class="metric-val ci" id="aqa-m-total">—</div><div class="metric-lbl">Total lines</div></div>
+        <div class="metric"><div class="metric-val cd" id="aqa-m-missing">—</div><div class="metric-lbl">Missing</div></div>
+        <div class="metric"><div class="metric-val cw" id="aqa-m-unexpected">—</div><div class="metric-lbl">Unexpected</div></div>
+        <div class="metric"><div class="metric-val cw" id="aqa-m-nofile">—</div><div class="metric-lbl">No file</div></div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="aqaShowTab('byvt',this)">By VT</button>
+        <button class="tab" onclick="aqaShowTab('issues',this)">Issues only</button>
+      </div>
+      <div class="tab-area">
+        <div class="pane active" id="aqa-pane-byvt">
+          <div class="fbar">
+            <input type="text" id="aqa-q" placeholder="Search VT..." oninput="aqaFilter()">
+          </div>
+          <div id="aqa-report"></div>
+        </div>
+        <div class="pane" id="aqa-pane-issues">
+          <div id="aqa-issues"></div>
+        </div>
+      </div>
+    </main>
+  </div><!-- /module-audioqa -->
+
+  <style>
+    #module-audioqa .pane { display:none }
+    #module-audioqa .pane.active { display:block }
+    .aqa-vt-row { border-bottom:1px solid var(--border); padding:10px 16px; display:grid; grid-template-columns:1fr auto auto; gap:12px; align-items:center; cursor:pointer }
+    .aqa-vt-row:hover { background:var(--surf2) }
+    .aqa-vt-name { font-weight:600; font-size:13px }
+    .aqa-ep-row { padding:8px 16px 8px 32px; border-bottom:1px solid var(--border2); display:grid; grid-template-columns:80px 1fr auto; gap:10px; align-items:center; font-size:12px }
+    .aqa-detail { display:none; background:var(--surf2) }
+    .aqa-detail.open { display:block }
+    .aqa-line-row { padding:6px 32px 6px 48px; border-bottom:1px solid var(--border2); font-size:11px; display:grid; grid-template-columns:110px 60px 1fr; gap:8px; font-family:var(--mono) }
+    .aqa-line-ts { color:var(--muted) }
+    .aqa-line-char { color:var(--acc2) }
+    .badge-ok-sm { background:rgba(61,214,140,.15); color:var(--ok); font-size:10px; padding:2px 7px; border-radius:10px; font-weight:700 }
+    .badge-miss { background:rgba(255,92,92,.15); color:var(--danger); font-size:10px; padding:2px 7px; border-radius:10px; font-weight:700 }
+    .badge-unex { background:rgba(245,166,35,.15); color:var(--warn); font-size:10px; padding:2px 7px; border-radius:10px; font-weight:700 }
+    .badge-nofile { background:rgba(90,90,90,.3); color:var(--muted); font-size:10px; padding:2px 7px; border-radius:10px; font-weight:700 }
+    .badge-bad { background:rgba(245,166,35,.15); color:var(--warn); font-size:10px; padding:2px 7px; border-radius:10px; font-weight:700 }
+  </style>
+
+  <script>
+  // ── Audio QA Module ──────────────────────────────────────────────
+  const AQA = {
+    mode: 'folder', // 'folder' | 'mix'
+    scriptLines: [],  // {ep, vt, timeIn, timeOut, character, script}
+    results: [],
+    audioCtx: null,
+  };
+
+  const VOICE_FACTOR = 4.0, SCAN_STEP = 0.5, SCAN_WIN = 0.3;
+
+  function aqaLog(m) { const e = g('aqa-log'); e.innerHTML += `<p>› ${m}</p>`; e.scrollTop = e.scrollHeight; }
+  function aqaPbar(p) { g('aqa-pbar').style.width = p + '%'; }
+  function aqaSetMode(mode, el) {
+    AQA.mode = mode;
+    document.querySelectorAll('#module-audioqa .tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    g('aqa-folder-cfg').style.display = mode === 'folder' ? '' : 'none';
+    g('aqa-mix-cfg').style.display = mode === 'mix' ? '' : 'none';
+  }
+  function aqaCheckReady() {}
+  function aqaShowTab(name, el) {
+    document.querySelectorAll('#aqa-pane-byvt, #aqa-pane-issues').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('#module-audioqa .tabs .tab').forEach(t => t.classList.remove('active'));
+    g('aqa-pane-' + name).classList.add('active');
+    el.classList.add('active');
+  }
+
+  // ── Fetch full script with timestamps ───────────────────────────
+  async function fetchScriptFull(sid, sname) {
+    if (!GOOG_TOKEN) throw new Error('Sign in with Google first');
+    // Use Sheets API v4 with OAuth — works from file:// and any origin
+    const encName = encodeURIComponent(sname);
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sid}/values/${encName}?key=${API_KEY}`;
+    const r = await fetch(url, { headers: { 'Authorization': `Bearer ${GOOG_TOKEN}` } });
+    if (!r.ok) throw new Error(`Sheets API error ${r.status}: ${(await r.json()).error?.message||r.statusText}`);
+    const data = await r.json();
+    const rows = data.values || [];
+    if (!rows.length) throw new Error('Empty sheet');
+    const hdrs = rows[0].map(h => String(h||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,''));
+    const fi = k => { for (const p of k) { const i = hdrs.findIndex(h => h.includes(p)); if (i >= 0) return i; } return -1; };
+    const ei=fi(['EPISODE','EP']), vi=fi(['VT']),
+          ti=fi(['TIMESTAMPIN','TIMEIN']), oi=fi(['TIMESTAMPOUT','TIMEOUT']),
+          ci=fi(['CHARACTER','CHAR','PERSONAJE']), si=fi(['SCRIPT','TEXT','TEXTO']);
+    if (ei < 0 || vi < 0) throw new Error('Could not find EPISODE or VT columns');
+    const out = [];
+    for (const row of rows.slice(1)) {
+      const ep = String(row[ei]||'').trim(), vt = String(row[vi]||'').trim();
+      const timeIn = ti>=0?String(row[ti]||'').trim():'', timeOut = oi>=0?String(row[oi]||'').trim():'';
+      if (ep && vt && timeIn && timeOut) {
+        out.push({ ep, vt, timeIn, timeOut, character: ci>=0?String(row[ci]||'').trim():'', script: si>=0?String(row[si]||'').trim():'' });
+      }
+    }
+    if (!out.length) throw new Error('No rows with EPISODE+VT+timestamps found');
+    return out;
+  }
+
+  // ── Shared audio analysis utilities ─────────────────────────────
+  function aqaTsToSec(ts) {
+    const c = (ts||'').replace(',','.');
+    const p = c.split(':');
+    if (p.length===3) return +p[0]*3600 + +p[1]*60 + parseFloat(p[2]);
+    if (p.length===2) return +p[0]*60 + parseFloat(p[1]);
+    return parseFloat(c)||0;
+  }
+  function aqaSecToTs(s) {
+    const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+    return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+sec.toFixed(3).replace('.',',').padStart(6,'0');
+  }
+  function aqaEpN(s) { return parseInt((s||'').replace(/\D/g,''),10)||0; }
+  function aqaEpFromStem(stem) {
+    if(!stem) return 0;
+    let m=stem.match(/(?:^|[_\-\s])ep?(\d{1,4})(?:[_\-\s]|$)/i); if(m) return parseInt(m[1],10);
+    m=stem.match(/ep?(\d{1,4})/i); if(m) return parseInt(m[1],10);
+    m=stem.match(/(\d{1,4})/); return m?parseInt(m[1],10):0;
+  }
+  function aqaGetRMS(buf,t0,t1) {
+    const sr=buf.sampleRate;
+    const s0=Math.max(0,Math.floor(t0*sr)),s1=Math.min(buf.length,Math.ceil(t1*sr));
+    if(s1<=s0) return 0;
+    let sq=0,n=0;
+    for(let ch=0;ch<buf.numberOfChannels;ch++){const d=buf.getChannelData(ch);for(let i=s0;i<s1;i++){sq+=d[i]*d[i];n++;}}
+    return Math.sqrt(sq/Math.max(n,1));
+  }
+  function aqaNoiseFloor(buf,segs) {
+    const sorted=[...segs].sort((a,b)=>a.t0-b.t0);
+    const samples=[];
+    if(sorted.length&&sorted[0].t0>0.5) samples.push(aqaGetRMS(buf,0,sorted[0].t0-0.2));
+    for(let i=0;i<sorted.length-1&&samples.length<6;i++){const gs=sorted[i].t1+0.15,ge=sorted[i+1].t0-0.15;if(ge-gs>=0.3)samples.push(aqaGetRMS(buf,gs,ge));}
+    let t=sorted.length?sorted[sorted.length-1].t1+0.2:0;
+    while(t+0.3<buf.duration&&samples.length<8){samples.push(aqaGetRMS(buf,t,t+0.3));t+=2;}
+    if(!samples.length) return 0;
+    samples.sort((a,b)=>a-b);
+    return samples[Math.floor(samples.length/2)];
+  }
+  function aqaCalcThresh(buf,segs) {
+    const noise=aqaNoiseFloor(buf,segs);
+    return Math.max(Math.min(noise*VOICE_FACTOR,Math.pow(10,-45/20)),Math.pow(10,-55/20));
+  }
+
+  async function aqaAnalyzeBuf(buf, epLines, skipUnexpected) {
+    const segs=epLines.map(l=>({t0:aqaTsToSec(l.timeIn),t1:aqaTsToSec(l.timeOut)})).filter(s=>s.t1>s.t0);
+    const thresh=aqaCalcThresh(buf,segs);
+    const TOL=1.0;
+    const results=[];
+
+    // Line detection with peak scan
+    for(let i=0;i<epLines.length;i++){
+      if(i%30===0) await new Promise(r=>setTimeout(r,0));
+      const l=epLines[i];
+      const lineDur=aqaTsToSec(l.timeOut)-aqaTsToSec(l.timeIn);
+      const PAD=Math.min(0.5,lineDur*0.5);
+      const scanStart=Math.max(0,aqaTsToSec(l.timeIn)-PAD);
+      const scanEnd=Math.min(buf.duration,aqaTsToSec(l.timeOut)+PAD);
+      const WIN=0.15; let maxRMS=0;
+      for(let t=scanStart;t<scanEnd-WIN+0.01;t+=WIN*0.5){const r=aqaGetRMS(buf,t,Math.min(t+WIN,scanEnd));if(r>maxRMS)maxRMS=r;}
+      const exactRMS=aqaGetRMS(buf,aqaTsToSec(l.timeIn),aqaTsToSec(l.timeOut));
+      if(exactRMS>maxRMS) maxRMS=exactRMS;
+      results.push({...l, missing:maxRMS<thresh, unexpected:false});
+    }
+
+    // Unexpected audio detection (skip for final mix — other VTs fill gaps)
+    if(!skipUnexpected && segs.length>0){
+      const allowedZones=segs.map(s=>({t0:Math.max(0,s.t0-TOL),t1:s.t1+TOL}));
+      allowedZones.sort((a,b)=>a.t0-b.t0);
+      const merged=[];
+      for(const z of allowedZones){
+        if(merged.length&&z.t0<=merged[merged.length-1].t1) merged[merged.length-1].t1=Math.max(merged[merged.length-1].t1,z.t1);
+        else merged.push({...z});
+      }
+      // Close gaps < 2s
+      for(let i=0;i<merged.length-1;i++){if(merged[i+1].t0-merged[i].t1<2.0)merged[i].t1=merged[i+1].t0;}
+
+      const SCAN_W=0.2;
+      let scanT=0;
+      const unexpBuf=[];
+      while(scanT<buf.duration-SCAN_W){
+        const center=scanT+SCAN_W*0.5;
+        const inAllowed=merged.some(z=>center>=z.t0&&center<=z.t1);
+        if(!inAllowed){
+          const r=aqaGetRMS(buf,scanT,scanT+SCAN_W);
+          if(r>=thresh){
+            const last=unexpBuf[unexpBuf.length-1];
+            if(last&&scanT-last.t1<0.5) last.t1=scanT+SCAN_W;
+            else unexpBuf.push({t0:scanT,t1:scanT+SCAN_W});
+          }
+        }
+        scanT+=SCAN_W*0.5;
+        if(Math.floor(scanT)%10===0) await new Promise(r=>setTimeout(r,0));
+      }
+      unexpBuf.forEach(u=>results.push({
+        ep:epLines[0]?.ep||'', vt:epLines[0]?.vt||'',
+        timeIn:aqaSecToTs(u.t0), timeOut:aqaSecToTs(u.t1),
+        character:'', script:'', missing:false, unexpected:true
+      }));
+    }
+    return results;
+  }
+
+  // ── Range-based Drive WAV analysis ──────────────────────────────
+  async function aqaDriveRangeFetch(fileId, b0, b1) {
+    const headers = { 'Range': `bytes=${b0}-${b1}` };
+    if (GOOG_TOKEN) headers['Authorization'] = `Bearer ${GOOG_TOKEN}`;
+    const url = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
+    const r = await fetch(url, { headers });
+    if (!r.ok && r.status !== 206) throw new Error(`HTTP ${r.status}`);
+    return r.arrayBuffer();
+  }
+  function aqaParseWavHdr(ab) {
+    const v=new DataView(ab); let offset=12, fmt={};
+    while(offset<Math.min(ab.byteLength-8,512)){
+      const id=String.fromCharCode(v.getUint8(offset),v.getUint8(offset+1),v.getUint8(offset+2),v.getUint8(offset+3));
+      const size=v.getUint32(offset+4,true);
+      if(id==='fmt '){fmt.sr=v.getUint32(offset+12,true);fmt.ch=v.getUint16(offset+10,true);fmt.bps=v.getUint16(offset+22,true);}
+      else if(id==='data'){fmt.dataOffset=offset+8;fmt.dataSize=size;break;}
+      offset+=8+size;
+    }
+    if(!fmt.sr) return null;
+    if(!fmt.dataOffset) fmt.dataOffset=44;
+    fmt.bpf=fmt.ch*(fmt.bps/8);
+    fmt.dur=fmt.dataSize/(fmt.sr*fmt.bpf);
+    return fmt;
+  }
+  function aqaRmsFromPCM(ab, fmt) {
+    const v=new DataView(ab); const step=fmt.bps/8; const maxV=Math.pow(2,fmt.bps-1);
+    let sq=0,n=0;
+    for(let i=0;i<ab.byteLength-step+1;i+=step){
+      let s=0;
+      if(fmt.bps===16) s=v.getInt16(i,true);
+      else if(fmt.bps===24){s=v.getUint8(i)|(v.getUint8(i+1)<<8)|(v.getUint8(i+2)<<16);if(s>=0x800000)s-=0x1000000;}
+      else if(fmt.bps===32) s=v.getInt32(i,true);
+      sq+=(s/maxV)**2;n++;
+    }
+    return n>0?Math.sqrt(sq/n):0;
+  }
+  function aqaTsToBytes(sec,fmt){return fmt.dataOffset+Math.floor(sec*fmt.sr)*fmt.bpf;}
+
+  async function aqaAnalyzeMix(fileId, allLines) {
+    aqaLog('Reading WAV header...');
+    const hdrAB=await aqaDriveRangeFetch(fileId,0,511);
+    const fmt=aqaParseWavHdr(hdrAB);
+    if(!fmt||!fmt.sr) throw new Error('Cannot parse WAV header — check file format');
+    aqaLog(`WAV: ${fmt.sr}Hz / ${fmt.bps}bit / ${fmt.ch}ch — ${fmt.dur.toFixed(0)}s`);
+
+    const vts=[...new Set(allLines.map(l=>l.vt))].sort();
+    const results=[];
+    let done=0;
+
+    for(const vt of vts){
+      aqaLog(`Analyzing ${vt}...`);
+      aqaPbar(10+done/vts.length*85);
+      const vtLines=allLines.filter(l=>l.vt===vt);
+      const eps=[...new Set(vtLines.map(l=>l.ep))];
+
+      for(const ep of eps){
+        const epLines=vtLines.filter(l=>l.ep===ep);
+        const segs=epLines.map(l=>({t0:aqaTsToSec(l.timeIn),t1:aqaTsToSec(l.timeOut)})).filter(s=>s.t1>s.t0);
+
+        // Calibrate noise floor from 3 gaps (small fetches)
+        const sorted=[...segs].sort((a,b)=>a.t0-b.t0);
+        const noiseSamples=[];
+        for(let i=0;i<sorted.length-1&&noiseSamples.length<3;i++){
+          const gs=sorted[i].t1+0.1,ge=sorted[i+1].t0-0.1;
+          if(ge-gs>=0.3){
+            const b0=aqaTsToBytes(gs,fmt),b1=aqaTsToBytes(Math.min(gs+0.4,ge),fmt)-1;
+            if(b1>b0){const ab=await aqaDriveRangeFetch(fileId,b0,b1);noiseSamples.push(aqaRmsFromPCM(ab,fmt));}
+          }
+        }
+        let noise=0.0001;
+        if(noiseSamples.length){noiseSamples.sort((a,b)=>a-b);noise=noiseSamples[Math.floor(noiseSamples.length/2)];}
+        const thresh=Math.max(Math.min(noise*VOICE_FACTOR,Math.pow(10,-45/20)),Math.pow(10,-55/20));
+
+        // Analyze each line — peak detection with range fetches in batches of 5
+        const BATCH=5;
+        for(let i=0;i<epLines.length;i+=BATCH){
+          const batch=epLines.slice(i,i+BATCH);
+          const batchResults=await Promise.all(batch.map(async l=>{
+            const lineDur=aqaTsToSec(l.timeOut)-aqaTsToSec(l.timeIn);
+            const PAD=Math.min(0.5,lineDur*0.5);
+            const scanStart=Math.max(0,aqaTsToSec(l.timeIn)-PAD);
+            const scanEnd=aqaTsToSec(l.timeOut)+PAD;
+            const WIN=0.2; let maxRMS=0;
+            for(let t=scanStart;t<scanEnd-WIN+0.01;t+=WIN*0.5){
+              const b0=aqaTsToBytes(t,fmt),b1=aqaTsToBytes(Math.min(t+WIN,scanEnd),fmt)-1;
+              if(b1<=b0) continue;
+              try{const ab=await aqaDriveRangeFetch(fileId,b0,b1);const r=aqaRmsFromPCM(ab,fmt);if(r>maxRMS)maxRMS=r;}catch(e){}
+            }
+            return {...l,ep,missing:maxRMS<thresh,unexpected:false};
+          }));
+          results.push(...batchResults);
+          await new Promise(r=>setTimeout(r,0));
+        }
+      }
+      done++;
+    }
+    return results;
+  }
+
+  // ── Run ──────────────────────────────────────────────────────────
+  async function aqaRun() {
+    const btn=g('aqa-btn-run');
+    btn.disabled=true; btn.textContent='Running...';
+    g('aqa-log').innerHTML=''; aqaPbar(0);
+    AQA.results=[];
+    g('aqa-report').innerHTML='<p style="padding:20px;color:var(--muted)">Analyzing...</p>';
+    g('aqa-issues').innerHTML='';
+    ['aqa-m-total','aqa-m-missing','aqa-m-unexpected','aqa-m-nofile'].forEach(id=>g(id).textContent='—');
+
+    try{
+      const sid=extractSheetId(g('aqa-sid').value.trim());
+      const sname=g('aqa-sname').value.trim();
+      if(!sid||!sname){alert('Enter Sheet ID and tab name.');btn.disabled=false;btn.textContent='▶ Run Audio QA';return;}
+
+      if(!GOOG_TOKEN){alert('Sign in with Google first (top right button).');btn.disabled=false;btn.textContent='▶ Run Audio QA';return;}
+
+      aqaLog('Loading script...');
+      aqaPbar(5);
+      AQA.scriptLines=await fetchScriptFull(sid,sname);
+      aqaLog(`Script loaded: ${AQA.scriptLines.length} lines, ${[...new Set(AQA.scriptLines.map(l=>l.vt))].length} VTs`);
+
+      if(AQA.mode==='mix'){
+        // Final mix: range requests from Drive
+        const wavInput=g('aqa-wavid').value.trim();
+        const fileId=extractFolderId(wavInput)||wavInput.match(/\/d\/([a-zA-Z0-9_-]{25,})/)?.[1]||(wavInput.length>20?wavInput:null);
+        if(!fileId){alert('Enter Drive link or File ID for the WAV.');btn.disabled=false;btn.textContent='▶ Run Audio QA';return;}
+        if(!GOOG_TOKEN){alert('Sign in with Google first (top right button).');btn.disabled=false;btn.textContent='▶ Run Audio QA';return;}
+        aqaLog('Analyzing final mix from Drive...');
+        AQA.results=await aqaAnalyzeMix(fileId,AQA.scriptLines);
+      } else {
+        // Folder mode: download each VT's WAV files
+        const fidInput=g('aqa-fid').value.trim();
+        if(!fidInput){alert('Enter Drive folder link.');btn.disabled=false;btn.textContent='▶ Run Audio QA';return;}
+        const folderId=extractFolderId(fidInput);
+
+        aqaLog('Scanning Drive folder...');
+        aqaPbar(8);
+        // Scan folder structure
+        const driveFiles={};
+        const scanFolder=async(fid,vtName)=>{
+          const q=`'${fid}' in parents and trashed=false`;
+          const d=await driveQ(q,'nextPageToken,files(id,name,mimeType)',null);
+          for(const f of d.files||[]){
+            if(f.mimeType==='application/vnd.google-apps.folder'){await scanFolder(f.id,f.name);}
+            else if(/\.wav$/i.test(f.name)){
+              if(!driveFiles[vtName])driveFiles[vtName]=[];
+              driveFiles[vtName].push(f);
+            }
+          }
+        };
+        await scanFolder(folderId,'ROOT');
+        delete driveFiles['ROOT'];
+        aqaLog(`Found ${Object.keys(driveFiles).length} VT folders`);
+
+        // Match folder names to VT names in script
+        const vtNames=[...new Set(AQA.scriptLines.map(l=>l.vt))].sort();
+        function normStr(s){return(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+        function matchVT(folder){
+          const fn=normStr(folder);
+          let m=vtNames.find(v=>normStr(v)===fn);if(m)return m;
+          const code=folder.match(/\(([^)]+)\)/);
+          if(code){m=vtNames.find(v=>normStr(v).includes(normStr(code[1])));if(m)return m;}
+          const fw=fn.replace(/\d/g,'').slice(0,Math.max(3,fn.replace(/\d/g,'').length));
+          if(fw.length>=3){m=vtNames.find(v=>normStr(v).startsWith(fw)||normStr(v).includes(fw));if(m)return m;}
+          const words=folder.toLowerCase().split(/[\s_\-]+/).filter(w=>w.length>=3&&!/^\d+$/.test(w));
+          for(const w of words){m=vtNames.find(v=>normStr(v).includes(normStr(w)));if(m)return m;}
+          return null;
+        }
+
+        AQA.audioCtx=AQA.audioCtx||new(window.AudioContext||window.webkitAudioContext)();
+        if(AQA.audioCtx.state==='suspended') await AQA.audioCtx.resume();
+
+        const folders=Object.keys(driveFiles);
+        let done=0;
+
+        // Track which VTs had no folder match
+        const matchedVTs=new Set();
+
+        for(const folder of folders){
+          const vt=matchVT(folder);
+          if(!vt){aqaLog(`⚠ No match for folder: ${folder}`);done++;continue;}
+          matchedVTs.add(vt);
+          aqaLog(`${folder} → ${vt}`);
+          aqaPbar(10+done/folders.length*85);
+
+          const vtLines=AQA.scriptLines.filter(l=>l.vt===vt);
+          const expectedEps=[...new Set(vtLines.map(l=>l.ep))];
+          const files=driveFiles[folder];
+
+          // Match files to episodes
+          const epFileMap={};
+          for(const f of files){
+            const n=aqaEpFromStem(f.name.replace(/\.[^.]+$/,''));
+            epFileMap[n]=f;
+          }
+
+          // Missing episode files
+          for(const ep of expectedEps){
+            if(!epFileMap[aqaEpN(ep)]){
+              AQA.results.push({vt,ep,timeIn:'',timeOut:'',character:'',script:'',missing:false,unexpected:false,missingFile:true});
+            }
+          }
+
+          // Analyze each delivered episode
+          for(const [epNum,file] of Object.entries(epFileMap)){
+            const epLabel=expectedEps.find(e=>aqaEpN(e)===parseInt(epNum))||('EP'+epNum);
+            const epLines=vtLines.filter(l=>aqaEpN(l.ep)===parseInt(epNum));
+            if(!epLines.length) continue;
+            try{
+              const headers={'Range':'bytes=0-10485759'}; // first 10MB
+              if(GOOG_TOKEN) headers['Authorization']=`Bearer ${GOOG_TOKEN}`;
+              const url=`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media&key=${API_KEY}`;
+              const r=await fetch(url,{headers});
+              const ab=await r.arrayBuffer();
+              const buf=await AQA.audioCtx.decodeAudioData(ab.slice(0));
+              const lineResults=await aqaAnalyzeBuf(buf,epLines,false);
+              lineResults.forEach(l=>AQA.results.push({...l,vt,ep:l.ep||epLabel}));
+            }catch(err){
+              aqaLog(`⚠ Error decoding ${file.name}: ${err.message}`);
+              AQA.results.push({vt,ep:epLabel,timeIn:'',timeOut:'',character:'',script:'',missing:false,unexpected:false,decodeError:err.message});
+            }
+          }
+          done++;
+        }
+
+        // VTs in script with no folder at all
+        for(const vt of vtNames){
+          if(!matchedVTs.has(vt)){
+            const eps=[...new Set(AQA.scriptLines.filter(l=>l.vt===vt).map(l=>l.ep))];
+            eps.forEach(ep=>AQA.results.push({vt,ep,timeIn:'',timeOut:'',character:'',script:'',missing:false,unexpected:false,missingFile:true}));
+          }
+        }
+      }
+
+      aqaRenderResults();
+    }catch(err){
+      aqaLog(`❌ Error: ${err.message}`);
+      console.error(err);
+    }finally{
+      btn.disabled=false; btn.textContent='▶ Run Audio QA';
+      aqaPbar(100);
+    }
+  }
+
+  // ── Render ───────────────────────────────────────────────────────
+  function aqaRenderResults() {
+    const lineR=AQA.results.filter(r=>!r.missingFile&&!r.unexpected&&!r.decodeError);
+    const missing=lineR.filter(r=>r.missing);
+    const unexpected=AQA.results.filter(r=>r.unexpected);
+    const missingFiles=AQA.results.filter(r=>r.missingFile);
+
+    g('aqa-m-total').textContent=lineR.length;
+    g('aqa-m-missing').textContent=missing.length;
+    g('aqa-m-unexpected').textContent=unexpected.length;
+    g('aqa-m-nofile').textContent=missingFiles.length;
+
+    // Group by VT
+    const allVTs=[...new Set([...AQA.results.map(r=>r.vt),...AQA.scriptLines.map(l=>l.vt)])].sort();
+    let html='';
+    for(const vt of allVTs){
+      const vtR=AQA.results.filter(r=>r.vt===vt);
+      const vtLines=vtR.filter(r=>!r.missingFile&&!r.unexpected&&!r.decodeError);
+      const vtMiss=vtLines.filter(r=>r.missing);
+      const vtUnex=vtR.filter(r=>r.unexpected);
+      const vtNoFile=vtR.filter(r=>r.missingFile);
+      const hasIssue=vtMiss.length||vtUnex.length||vtNoFile.length;
+      const badge=!hasIssue
+        ?`<span class="badge-ok-sm">✓ OK</span>`
+        :`<span class="badge-miss">${vtMiss.length} missing</span>${vtUnex.length?`<span class="badge-unex" style="margin-left:4px">${vtUnex.length} unexpected</span>`:''} ${vtNoFile.length?`<span class="badge-nofile" style="margin-left:4px">${vtNoFile.length} no file</span>`:''}`;
+
+      const uid='aqa-vt-'+vt.replace(/[^a-z0-9]/gi,'_');
+      html+=`<div class="aqa-vt-row" onclick="g('${uid}').classList.toggle('open')">
+        <span class="aqa-vt-name">${esc(vt)}</span>
+        <span style="font-size:11px;color:var(--muted)">${vtLines.length} lines</span>
+        <span>${badge}</span>
+      </div>
+      <div class="aqa-detail" id="${uid}">`;
+
+      // Episodes
+      const eps=[...new Set(vtR.map(r=>r.ep))].sort((a,b)=>aqaEpN(a)-aqaEpN(b));
+      for(const ep of eps){
+        const epR=vtR.filter(r=>r.ep===ep);
+        const epLines=epR.filter(r=>!r.missingFile&&!r.unexpected&&!r.decodeError);
+        const epMiss=epLines.filter(r=>r.missing);
+        const epUnex=epR.filter(r=>r.unexpected);
+        const isNoFile=epR.some(r=>r.missingFile);
+        const isDecodeErr=epR.find(r=>r.decodeError);
+        let dot='🟢',status=`${epLines.length-epMiss.length}/${epLines.length} OK`,scol='var(--ok)';
+        if(isNoFile){dot='⚪';status='No file';scol='var(--muted)';}
+        else if(isDecodeErr){dot='🟠';status='Decode error';scol='var(--warn)';}
+        else if(epMiss.length){dot='🔴';status=`${epMiss.length}/${epLines.length} missing`;scol='var(--danger)';}
+        else if(epUnex.length){dot='🟡';status='Unexpected audio';scol='var(--warn)';}
+
+        const hasDetail=epMiss.length||epUnex.length;
+        const uid2='aqa-ep-'+vt.replace(/[^a-z0-9]/gi,'_')+'_'+ep.replace(/[^a-z0-9]/gi,'_');
+        html+=`<div class="aqa-ep-row ${hasDetail?'clickable':''}" ${hasDetail?`onclick="g('${uid2}').classList.toggle('open')"`:''} style="${hasDetail?'cursor:pointer':''}">
+          <span>${dot} <span style="font-family:var(--mono)">${esc(ep)}</span></span>
+          <span></span>
+          <span style="color:${scol};font-weight:600">${status}</span>
+        </div>`;
+        if(hasDetail){
+          html+=`<div class="aqa-detail" id="${uid2}">`;
+          if(epUnex.length){
+            html+=`<div class="aqa-line-row" style="color:var(--warn);font-weight:700">⚠ Unexpected audio (${epUnex.length})</div>`;
+            epUnex.forEach(u=>html+=`<div class="aqa-line-row"><span class="aqa-line-ts">${esc(u.timeIn)}→${esc(u.timeOut)}</span><span></span><span style="color:var(--warn)">Audio outside timestamps</span></div>`);
+          }
+          if(epMiss.length){
+            html+=`<div class="aqa-line-row" style="color:var(--danger);font-weight:700">✗ Missing lines (${epMiss.length})</div>`;
+            epMiss.forEach(l=>html+=`<div class="aqa-line-row"><span class="aqa-line-ts">${esc(l.timeIn)}</span><span class="aqa-line-char">${esc(l.character)}</span><span>${esc((l.script||'').slice(0,80))}${(l.script||'').length>80?'…':''}</span></div>`);
+          }
+          html+=`</div>`;
+        }
+      }
+      html+=`</div>`;
+    }
+    g('aqa-report').innerHTML=html||'<p style="padding:20px;color:var(--muted)">No results.</p>';
+
+    // Issues pane — just VTs with problems
+    const issueVTs=allVTs.filter(vt=>{
+      const vtR=AQA.results.filter(r=>r.vt===vt);
+      return vtR.some(r=>r.missing||r.unexpected||r.missingFile);
+    });
+    g('aqa-issues').innerHTML=issueVTs.length
+      ?`<p style="padding:12px 16px;color:var(--muted);font-size:12px">${issueVTs.length} VT${issueVTs.length!==1?'s':''} with issues — click a VT in the "By VT" tab to see details.</p><ul style="padding:0 16px 16px">${issueVTs.map(vt=>`<li style="padding:6px 0;border-bottom:1px solid var(--border2);font-size:13px">${esc(vt)}</li>`).join('')}</ul>`
+      :`<p style="padding:20px;color:var(--ok)">✓ No issues found.</p>`;
+  }
+
+  function aqaFilter(){
+    const q=g('aqa-q').value.toLowerCase();
+    document.querySelectorAll('.aqa-vt-row').forEach(row=>{
+      const name=row.querySelector('.aqa-vt-name')?.textContent.toLowerCase()||'';
+      const show=!q||name.includes(q);
+      row.style.display=show?'':'none';
+      const detId=row.getAttribute('onclick')?.match(/g\('([^']+)'\)/)?.[1];
+      if(detId) g(detId).style.display=!show?'none':'';
+    });
+  }
+  </script>
+
 </body>
 
 </html>
