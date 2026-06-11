@@ -3554,9 +3554,6 @@
         <div class="pbar"><div class="pbar-fill" id="aqa-pbar"></div></div>
         <div class="logbox" id="aqa-log"></div>
       </div>
-      <div style="padding:10px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--muted);line-height:1.5">
-        ⚠ Audio analysis uses RMS detection with ±1s tolerance per timestamp. Results may vary depending on recording levels and background noise. Always review flagged lines manually before taking action.
-      </div>
     </aside>
     <main class="main">
       <div class="metrics">
@@ -4100,6 +4097,9 @@
   }
   </script>
 
+  <footer style="position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-top:1px solid var(--border);padding:6px 20px;font-size:10px;color:var(--muted);line-height:1.4;z-index:50;text-align:center">
+    ⚠ Audio analysis uses RMS detection with ±1s tolerance per timestamp. Results may vary depending on recording levels and background noise. Always review flagged lines manually before taking action.
+  </footer>
 </body>
 
 </html>
